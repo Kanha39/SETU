@@ -1,4 +1,4 @@
-data/
+*.csv
 dataset/
 .ipynb_checkpoints
 .venv/
