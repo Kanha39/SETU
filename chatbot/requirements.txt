@@ -1,0 +1,7 @@
+pandas
+numpy
+google-genai
+python-dotenv
+xgboost
+lightgbm
+scikit-learn
