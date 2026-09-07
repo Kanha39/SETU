@@ -36,16 +36,12 @@ def compute_time_risk_tier(row) -> str:
 
 
 def compute_risk_tier(row) -> str:
-    """Overall risk = the worse of cost risk and time risk.
-    If both are Unknown, overall risk is also Unknown."""
     cost_tier = compute_cost_risk_tier(row)
     time_tier = compute_time_risk_tier(row)
 
     if cost_tier == "Unknown" and time_tier == "Unknown":
         return "Unknown"
 
-    # Treat Unknown as not-worse-than-anything when the other dimension has
-    # a real value, so one missing prediction doesn't hide a real risk.
     cost_rank = RISK_TIER_ORDER[cost_tier] if cost_tier != "Unknown" else -1
     time_rank = RISK_TIER_ORDER[time_tier] if time_tier != "Unknown" else -1
 

@@ -1,50 +1,33 @@
-"""
-Central configuration for the PAIMANA chatbot.
-Nothing else in this package should hardcode paths, model names, or the
-system prompt -- read them from here so changes only need to happen once.
-"""
-
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Assumes this file lives at <repo_root>/chatbot/config.py.
 BASE_DIR = Path(__file__).resolve().parent.parent
 CHATBOT_DIR = Path(__file__).resolve().parent
 
-# Loads chatbot/.env automatically (GEMINI_API_KEY, etc.) so you don't need
-# to `export` it manually every terminal session. Does nothing if the file
-# doesn't exist -- safe to leave in even before you've created .env.
+
 load_dotenv(dotenv_path=CHATBOT_DIR / ".env")
 
 DATA_PATH = BASE_DIR/ "ml-pipeline" / "data" / "processed" / "merged_projects.csv"
 
-# Trained model files (.pkl) from Person 2 (XGBoost, cost) and Person 3
-# (LightGBM, time). Place the actual files at these paths -- see
-# model_inference.py for how they're loaded and used.
+
 MODEL_DIR = BASE_DIR/ "ml-pipeline" / "data" / "models"
 COST_MODEL_PATH = MODEL_DIR / "cost_model.pkl"
 TIME_MODEL_PATH = MODEL_DIR / "time_model.pkl"
 
-MODEL_NAME = "gemini-3.6-flash"  # verify against your working RAG project's model name
+MODEL_NAME = "gemini-3.6-flash"  
 
-# Real ML model output columns, confirmed with Person 2 (cost) and Person 3 (time).
-# Note: DELAY_PRED_COL keeps its original casing/spacing as merged in -- it does
-# not follow the all-lowercase convention used by the rest of this dataset.
-COST_OVERRUN_PRED_COL = "predicted_overrun"     # percentage, e.g. 20 means 20%
-DELAY_PRED_COL = "Predicted Delay (days)"       # number of days
 
-# Thresholds for turning each model's raw number into a Low/Medium/High tier.
-# These are first-pass guesses -- revisit once you've looked at the actual
-# distribution of predictions in your dataset, and mention to judges that
-# they're configurable.
+COST_OVERRUN_PRED_COL = "predicted_overrun"     
+DELAY_PRED_COL = "Predicted Delay (days)"       
+
+
 COST_RISK_HIGH_THRESHOLD = 20    # percent
 COST_RISK_MEDIUM_THRESHOLD = 5   # percent
 DELAY_RISK_HIGH_THRESHOLD = 180  # days
 DELAY_RISK_MEDIUM_THRESHOLD = 30 # days
 
-# Used to pick the "worse" of the cost-risk and time-risk tiers as the
-# overall risk tier.
+
 RISK_TIER_ORDER = {"Low": 0, "Medium": 1, "High": 2, "Unknown": -1}
 
 RISK_KEYWORDS = ["high risk", "high-risk", "risky", "at risk"]

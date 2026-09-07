@@ -7,10 +7,7 @@ from chatbot.config import COST_OVERRUN_PRED_COL
 from chatbot.data_loader import df
 from chatbot.risk import compute_risk_tier, compute_cost_risk_tier, compute_time_risk_tier
  
-# Common question-phrasing words stripped out before matching, so only the
-# meaningful part of the query ("vijaywada airport") gets compared against
-# project names -- otherwise "tell me about the project at X" never matches
-# anything, since the whole sentence isn't literally in any project name.
+
 _STOPWORDS = {
     "the", "a", "an", "of", "in", "on", "at", "for", "to", "and", "or", "is", "are",
     "tell", "me", "about", "what", "give", "details", "detail", "project", "projects",
@@ -41,11 +38,10 @@ def _fuzzy_score(query_clean: str, candidate_text: str) -> float:
     if not query_clean or not candidate_clean:
         return 0.0
  
-    # Typo-tolerant string similarity (handles "vijaywada" vs "Vijayawada").
+    
     ratio = difflib.SequenceMatcher(None, query_clean, candidate_clean).ratio()
  
-    # Word-overlap: what fraction of the query's meaningful words appear in
-    # the candidate text, regardless of order.
+    
     query_words = set(query_clean.split())
     candidate_words = set(candidate_clean.split())
     overlap = len(query_words & candidate_words) / max(len(query_words), 1)
@@ -54,10 +50,6 @@ def _fuzzy_score(query_clean: str, candidate_text: str) -> float:
  
  
 def find_direct_match(query: str, top_n: int = 3, min_score: float = 0.35) -> pd.DataFrame:
-    """Fuzzy match against project_code (exact), then project_name/agency
-    (typo-tolerant, stopword-stripped). Placeholder until ChromaDB semantic
-    matching is added -- this handles typos and reordered phrasing but not
-    deeper paraphrasing (e.g. "that Bihar bridge project")."""
     q_stripped = query.lower().strip()
     code_match = df[df["project_code"].astype(str).str.lower() == q_stripped]
     if not code_match.empty:

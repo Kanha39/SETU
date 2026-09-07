@@ -1,9 +1,3 @@
-"""
-Formats matched project rows into the exact-fact text block handed to
-Gemini. Gemini only ever narrates these facts -- it does not generate the
-numbers itself.
-"""
-
 import pandas as pd
 
 from chatbot.config import CONTEXT_FIELDS

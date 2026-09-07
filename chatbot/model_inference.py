@@ -1,19 +1,3 @@
-"""
-Loads Person 2's cost-overrun model and Person 3's delay model from their
-.pkl files and runs predictions.
-
-Only this file touches the trained model objects. Everything else
-(score_dataset.py, risk.py indirectly via the columns it produces) goes
-through the functions here.
-
-These files turned out to be full scikit-learn Pipelines (SimpleImputer +
-OneHotEncoder + estimator), not bare XGBoost/LightGBM boosters -- so
-preprocessing is already bundled in, you don't need a separate encoder from
-Person 2/3. Loaded with joblib rather than plain pickle, since that's the
-conventional (and in this case necessary) way to persist fitted sklearn
-Pipelines with large internal arrays like a fitted OneHotEncoder.
-"""
-
 import pickle
 from pathlib import Path
 
@@ -57,10 +41,6 @@ def get_time_model():
 
 
 def get_expected_features(model) -> list:
-    """Best-effort introspection of the feature names a model was trained
-    on, so you don't have to hunt through the training notebook. Tries the
-    common attributes across sklearn / XGBoost / LightGBM wrappers and
-    fails loudly if none are found, rather than guessing."""
     if hasattr(model, "feature_names_in_"):            # generic sklearn estimator
         return list(model.feature_names_in_)
     if hasattr(model, "get_booster"):                   # xgboost sklearn wrapper
@@ -80,7 +60,6 @@ def get_expected_features(model) -> list:
     )
 
 def prepare_cost_features(data: pd.DataFrame) -> pd.DataFrame:
-    """Create the engineered features used by Person 2's cost model."""
     data = data.copy()
 
     # Convert date columns to datetime
@@ -112,10 +91,7 @@ def prepare_cost_features(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 def build_feature_matrix(data: pd.DataFrame, expected_features: list) -> pd.DataFrame:
-    """Align `data`'s columns to exactly what the model expects, in order.
-    Raises a clear error listing any missing columns instead of silently
-    filling them with 0/NaN, which would produce a wrong prediction with
-    no warning."""
+    
     missing = [f for f in expected_features if f not in data.columns]
     if missing:
         raise ValueError(
@@ -145,10 +121,7 @@ def predict_delay_days(data: pd.DataFrame) -> np.ndarray:
 
 
 def score_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Batch-score every row in df and return a copy with the two
-    prediction columns added/overwritten. Run this once (see
-    score_dataset.py) rather than scoring rows one at a time on every
-    chatbot query -- much faster and keeps per-query latency low."""
+    
     scored = df.copy()
     scored[COST_OVERRUN_PRED_COL] = predict_cost_overrun(df)
     scored[DELAY_PRED_COL] = predict_delay_days(df)

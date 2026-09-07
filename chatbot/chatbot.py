@@ -40,4 +40,7 @@ if __name__ == "__main__":
             break
         if not user_input:
             continue
-        print("\nBot:", answer_query(user_input), "\n")
+        try:
+            print("\nBot:", answer_query(user_input), "\n")
+        except Exception as e:
+            print(f"\nBot: Sorry, something went wrong answering that -- {e}\n")

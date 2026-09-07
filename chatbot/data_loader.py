@@ -1,8 +1,3 @@
-"""
-Loads the merged, cleaned project dataset and derives the reference value
-lists used for entity matching. This is the only file that touches the raw CSV.
-"""
-
 import pandas as pd
 
 from chatbot.config import DATA_PATH
