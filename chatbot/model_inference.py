@@ -1,22 +1,23 @@
 """
-Loads Person 2's XGBoost cost-overrun model and Person 3's LightGBM delay
-model from their .pkl files and runs predictions.
+Loads Person 2's cost-overrun model and Person 3's delay model from their
+.pkl files and runs predictions.
 
 Only this file touches the trained model objects. Everything else
 (score_dataset.py, risk.py indirectly via the columns it produces) goes
 through the functions here.
 
-IMPORTANT -- no preprocessing pipeline (scaler/encoder) was provided
-alongside these models. This assumes both models take raw numeric features
-directly, which is typical for tree-based models (XGBoost/LightGBM) with no
-categorical columns. If either model was actually trained on encoded or
-scaled features, predictions will be silently wrong. Confirm with Person
-2/3 whether any encoding/scaling was applied before trusting these numbers.
+These files turned out to be full scikit-learn Pipelines (SimpleImputer +
+OneHotEncoder + estimator), not bare XGBoost/LightGBM boosters -- so
+preprocessing is already bundled in, you don't need a separate encoder from
+Person 2/3. Loaded with joblib rather than plain pickle, since that's the
+conventional (and in this case necessary) way to persist fitted sklearn
+Pipelines with large internal arrays like a fitted OneHotEncoder.
 """
 
 import pickle
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -32,8 +33,13 @@ def _load_pickle(path: Path):
             f"Model file not found at {path}. Copy the .pkl file from "
             f"Person 2/3 into that location, or update the path in config.py."
         )
-    with open(path, "rb") as f:
-        return pickle.load(f)
+    try:
+        return joblib.load(path)
+    except Exception:
+        # Fallback for the rare case a model really was saved with plain
+        # pickle rather than joblib.
+        with open(path, "rb") as f:
+            return pickle.load(f)
 
 
 def get_cost_model():
@@ -73,6 +79,37 @@ def get_expected_features(model) -> list:
         "get_expected_features()."
     )
 
+def prepare_cost_features(data: pd.DataFrame) -> pd.DataFrame:
+    """Create the engineered features used by Person 2's cost model."""
+    data = data.copy()
+
+    # Convert date columns to datetime
+    date_columns = [
+        "date_of_approval",
+        "start_date",
+        "target_doc",
+    ]
+
+    for col in date_columns:
+        if col in data.columns:
+            data[col] = pd.to_datetime(data[col], errors="coerce")
+
+    # Date-derived features
+    data["approval_year"] = data["date_of_approval"].dt.year
+    data["approval_month"] = data["date_of_approval"].dt.month
+
+    data["start_year"] = data["start_date"].dt.year
+    data["start_month"] = data["start_date"].dt.month
+
+    data["target_year"] = data["target_doc"].dt.year
+    data["target_month"] = data["target_doc"].dt.month
+
+    # Planned project duration
+    data["planned_duration_days"] = (
+        data["target_doc"] - data["start_date"]
+    ).dt.days
+
+    return data
 
 def build_feature_matrix(data: pd.DataFrame, expected_features: list) -> pd.DataFrame:
     """Align `data`'s columns to exactly what the model expects, in order.
@@ -90,7 +127,14 @@ def build_feature_matrix(data: pd.DataFrame, expected_features: list) -> pd.Data
 
 def predict_cost_overrun(data: pd.DataFrame) -> np.ndarray:
     model = get_cost_model()
-    features = build_feature_matrix(data, get_expected_features(model))
+
+    data = prepare_cost_features(data)
+
+    features = build_feature_matrix(
+        data,
+        get_expected_features(model)
+    )
+
     return model.predict(features)
 
 

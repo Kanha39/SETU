@@ -22,11 +22,11 @@ DATA_PATH = BASE_DIR/ "ml-pipeline" / "data" / "processed" / "merged_projects.cs
 # Trained model files (.pkl) from Person 2 (XGBoost, cost) and Person 3
 # (LightGBM, time). Place the actual files at these paths -- see
 # model_inference.py for how they're loaded and used.
-MODEL_DIR = BASE_DIR / "data" / "models"
+MODEL_DIR = BASE_DIR/ "ml-pipeline" / "data" / "models"
 COST_MODEL_PATH = MODEL_DIR / "cost_model.pkl"
 TIME_MODEL_PATH = MODEL_DIR / "time_model.pkl"
 
-MODEL_NAME = "gemini-2.5-flash"  # verify against your working RAG project's model name
+MODEL_NAME = "gemini-3.6-flash"  # verify against your working RAG project's model name
 
 # Real ML model output columns, confirmed with Person 2 (cost) and Person 3 (time).
 # Note: DELAY_PRED_COL keeps its original casing/spacing as merged in -- it does
