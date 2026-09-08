@@ -31,7 +31,7 @@ DELAY_RISK_MEDIUM_THRESHOLD = 30 # days
 RISK_TIER_ORDER = {"Low": 0, "Medium": 1, "High": 2, "Unknown": -1}
 
 RISK_KEYWORDS = ["high risk", "high-risk", "risky", "at risk"]
-DELAY_KEYWORDS = ["delayed", "delay", "late", "behind schedule"]
+DELAY_KEYWORDS = ["delayed", "delay", "behind schedule"]
 THIS_YEAR_KEYWORDS = ["this year", "current year"]
 STATUS_KEYWORDS = ["completed", "ongoing", "frozen", "deleted"]
 

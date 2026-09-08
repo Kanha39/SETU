@@ -28,15 +28,24 @@ def get_client() -> genai.Client:
     return _client
  
  
-def call_gemini(user_message: str, context_block: str) -> str:
+def call_gemini(user_message: str, context_block: str, history: list = None) -> str:
+    history = history or []
+    
+    
+    contents = []
+    for turn in history[-6:]:  
+        contents.append({"role": turn["role"], "parts": [{"text": turn["text"]}]})
+ 
+    
     prompt = f"PROJECT DATA:\n{context_block}\n\nUSER QUESTION:\n{user_message}"
+    contents.append({"role": "user", "parts": [{"text": prompt}]})
  
     last_error = None
     for attempt in range(_MAX_RETRIES):
         try:
             response = get_client().models.generate_content(
                 model=MODEL_NAME,
-                contents=prompt,
+                contents=contents,
                 config={"system_instruction": SYSTEM_PROMPT},
             )
             return response.text

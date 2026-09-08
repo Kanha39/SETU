@@ -13,6 +13,7 @@ _STOPWORDS = {
     "tell", "me", "about", "what", "give", "details", "detail", "project", "projects",
     "explain", "show", "please", "can", "you", "info", "information", "regarding",
     "related", "why", "how", "does", "did", "has", "have", "this", "that",
+    "more", "it", "them", "these", "those", "any", "further"
 }
  
  
