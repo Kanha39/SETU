@@ -1,0 +1,64 @@
+{
+    "model_name": "cost_model_v2",
+    "model_type": "CatBoostRegressor",
+    "target": "cost_overrun_pct",
+    "required_inputs": [
+        "original_cost",
+        "cumulative_expenditure",
+        "physical_progress",
+        "agency",
+        "state",
+        "ministry",
+        "sector",
+        "status",
+        "date_of_approval",
+        "start_date",
+        "target_doc"
+    ],
+    "categorical_features": [
+        "agency",
+        "state",
+        "ministry",
+        "sector",
+        "status"
+    ],
+    "model_features": [
+        "original_cost_cr",
+        "cumulative expenditure in rs. crore",
+        "physical progress (in percentage)",
+        "agency",
+        "state",
+        "ministry",
+        "sector",
+        "status",
+        "expenditure_to_original_cost_ratio",
+        "expenditure_progress_mismatch",
+        "high_spend_low_progress_flag",
+        "negative_expenditure_flag",
+        "approval_year",
+        "approval_month",
+        "start_year",
+        "start_month",
+        "target_year",
+        "target_month",
+        "planned_duration_days",
+        "approval_to_start_days",
+        "remaining_progress_pct",
+        "spend_gap_to_progress",
+        "spend_per_progress_point",
+        "log_original_cost",
+        "log_expenditure"
+    ],
+    "outputs": [
+        "predicted_cost_overrun_pct",
+        "estimated_additional_cost_cr",
+        "estimated_revised_cost_cr"
+    ],
+    "notes": [
+        "Predicted cost overrun is a percentage.",
+        "Estimated additional cost is calculated from the user's original cost.",
+        "Estimated revised cost is original cost plus estimated additional cost.",
+        "The model does not use revised_cost_cr as an input feature.",
+        "The model does not use cost_overrun_pct as an input feature."
+    ]
+}

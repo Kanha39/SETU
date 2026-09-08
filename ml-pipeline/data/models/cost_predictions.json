@@ -1,0 +1,21 @@
+{
+    "timestamp": "2026-09-08T16:28:37.894986",
+    "inputs": {
+        "original_cost_cr": 268.0,
+        "cumulative_expenditure_cr": 35.0,
+        "physical_progress_pct": 20.0,
+        "agency": "Adani Airport Holdings Limited",
+        "state": "Andhra Pradesh",
+        "ministry": "Ministry of Civil Aviation",
+        "sector": "Aviation & Aviation Infrastructure",
+        "status": "Ongoing",
+        "date_of_approval": "2024/11/01",
+        "start_date": "2024/12/01",
+        "target_doc": "2026/12/01"
+    },
+    "prediction": {
+        "predicted_cost_overrun_pct": -0.04718615566671111,
+        "estimated_additional_cost_cr": -0.1264588971867858,
+        "estimated_revised_cost_cr": 267.8735411028132
+    }
+}

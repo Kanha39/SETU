@@ -1,0 +1,10 @@
+{
+    "model": "CatBoostRegressor",
+    "target": "cost_overrun_pct",
+    "r2": 0.6616198216599734,
+    "mae": 0.16579007923145794,
+    "rmse": 0.5213432848562108,
+    "test_size": 0.2,
+    "random_state": 42,
+    "split_method": "Project-level GroupShuffleSplit"
+}
