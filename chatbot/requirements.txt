@@ -1,3 +1,6 @@
+fastapi
+uvicorn
+pydantic
 pandas
 numpy
 google-genai
@@ -6,3 +9,5 @@ xgboost
 lightgbm
 scikit-learn
 joblib
+SQLAlchemy
+PyMySQL

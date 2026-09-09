@@ -1,25 +1,33 @@
 from pathlib import Path
-
+import os
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CHATBOT_DIR = Path(__file__).resolve().parent
 
-
+# Load .env FIRST, before reading any environment variables below.
 load_dotenv(dotenv_path=CHATBOT_DIR / ".env")
 
-DATA_PATH = BASE_DIR/ "ml-pipeline" / "data" / "processed" / "merged_projects.csv"
+# --- MySQL (shared with Person 4's Spring Boot backend) ---
+DB_HOST = os.environ.get("DB_HOST", "localhost")
+DB_PORT = os.environ.get("DB_PORT", "3306")
+DB_NAME = os.environ.get("DB_NAME", "paimana")
+DB_USER = os.environ.get("DB_USER")
+DB_PASSWORD = os.environ.get("DB_PASSWORD")
 
+DB_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-MODEL_DIR = BASE_DIR/ "ml-pipeline" / "data" / "models"
+DATA_PATH = BASE_DIR / "ml-pipeline" / "data" / "processed" / "merged_projects.csv"
+
+MODEL_DIR = BASE_DIR / "ml-pipeline" / "data" / "models"
 COST_MODEL_PATH = MODEL_DIR / "cost_model.pkl"
 TIME_MODEL_PATH = MODEL_DIR / "time_model.pkl"
 
-MODEL_NAME = "gemini-3.6-flash"  
+MODEL_NAME = "gemini-3.6-flash"
 
 
-COST_OVERRUN_PRED_COL = "predicted_overrun"     
-DELAY_PRED_COL = "Predicted Delay (days)"       
+COST_OVERRUN_PRED_COL = "predicted_overrun"
+DELAY_PRED_COL = "Predicted Delay (days)"
 
 
 COST_RISK_HIGH_THRESHOLD = 20    # percent

@@ -4,7 +4,7 @@ from chatbot.data_loader import df
 
 
 def find_similar_past_projects(project_row: pd.Series, top_n: int = 3) -> pd.DataFrame:
-    finished = df[df["status"].str.lower().isin(["completed", "frozen", "deleted"])].copy()
+    finished = df[df["status"].str.lower().isin(["completed", "Frozen or Deleted"])].copy()
     if finished.empty:
         return finished
 
