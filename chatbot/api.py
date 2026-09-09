@@ -85,6 +85,7 @@ def predict_project(form: ProjectForm):
     # revised cost equals original cost.
     project_data["revised_cost_cr"] = original_cost
     project_data["cost_overrun_pct"] = 0.0
+    
 
     if original_cost > 0:
         ratio = cumulative / original_cost

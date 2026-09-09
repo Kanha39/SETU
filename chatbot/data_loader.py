@@ -1,16 +1,24 @@
 import pandas as pd
 
-from chatbot.config import PROJECTS_TABLE
-from chatbot.db import engine
+from chatbot.config import DATA_PATH
 
 DATE_COLUMNS = ["date_of_approval", "start_date", "actual_doc", "target_doc", "revised_doc"]
 
 
 def load_data() -> pd.DataFrame:
-    """Loads the projects dataset from MySQL (populated once via
-    migrate_csv_to_mysql.py) instead of reading the CSV directly, so the
-    Spring Boot backend and this chatbot service share one source of truth."""
-    df = pd.read_sql_table(PROJECTS_TABLE, con=engine)
+    """Loads the historical projects dataset from the local merged_projects.csv
+    (DATA_PATH in config.py), instead of fetching it over HTTP from the
+    db_bridge service / MySQL. User-submitted project data and chat history
+    still go through MySQL via db.py -- this only affects the historical
+    dataset used for retrieval, filtering, and similarity search."""
+    if not DATA_PATH.exists():
+        raise RuntimeError(
+            f"Historical dataset CSV not found at {DATA_PATH}. Check "
+            "DATA_PATH in config.py, or that merged_projects.csv is "
+            "actually there."
+        )
+
+    df = pd.read_csv(DATA_PATH, low_memory=False)
 
     for col in DATE_COLUMNS:
         if col in df.columns:

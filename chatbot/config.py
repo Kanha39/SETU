@@ -17,6 +17,21 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD")
 
 DB_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+# Name of the MySQL table holding the historical project dataset (the one
+# migrate_csv_to_mysql.py populates from merged_projects.csv). CONFIRM this
+# matches the actual table name your friend created in Spring Boot's schema
+# -- override it in .env as PROJECTS_TABLE=whatever_it_actually_is if it
+# doesn't match the default below.
+PROJECTS_TABLE = os.environ.get("PROJECTS_TABLE", "projects")
+
+# URL of the read-only db_bridge.py service (run on whichever machine
+# actually hosts MySQL) that this chatbot service fetches the historical
+# projects dataset from over HTTP, e.g. https://xyz.ngrok-free.app
+# (no trailing slash). Only needed for data_loader.py -- DB_URL above is
+# still used by migrate_csv_to_mysql.py and db_bridge.py themselves, which
+# should be run directly on the machine that hosts MySQL.
+PROJECTS_API_URL = os.environ.get("PROJECTS_API_URL", "")
+
 DATA_PATH = BASE_DIR / "ml-pipeline" / "data" / "processed" / "merged_projects.csv"
 
 MODEL_DIR = BASE_DIR / "ml-pipeline" / "data" / "models"
@@ -41,7 +56,7 @@ RISK_TIER_ORDER = {"Low": 0, "Medium": 1, "High": 2, "Unknown": -1}
 RISK_KEYWORDS = ["high risk", "high-risk", "risky", "at risk"]
 DELAY_KEYWORDS = ["delayed", "delay", "behind schedule"]
 THIS_YEAR_KEYWORDS = ["this year", "current year"]
-STATUS_KEYWORDS = ["completed", "ongoing", "frozen", "deleted"]
+STATUS_KEYWORDS = ["completed", "ongoing", "frozen or deleted"]
 
 CONTEXT_FIELDS = [
     "project_code", "project_name", "agency", "state", "sector", "ministry", "status",
