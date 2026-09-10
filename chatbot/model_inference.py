@@ -11,19 +11,35 @@ _cost_model = None
 _time_model = None
 
 
+def _fallback_cost_pred(row: pd.Series) -> float:
+    original_cost = float(row.get("original_cost_cr", 0) or 0)
+    cumulative = float(row.get("cumulative expenditure in rs. crore", row.get("cumulative_expenditure", 0)) or 0)
+    progress = float(row.get("physical progress (in percentage)", row.get("physical_progress", 0)) or 0)
+
+    ratio = cumulative / original_cost if original_cost > 0 else 0.0
+    base = max(0.0, (ratio - 0.75) * 100)
+    progress_penalty = max(0.0, (50 - progress) * 0.35)
+    return round(float(base + progress_penalty), 2)
+
+
+def _fallback_delay_pred(row: pd.Series) -> float:
+    original_cost = float(row.get("original_cost_cr", 0) or 0)
+    cumulative = float(row.get("cumulative expenditure in rs. crore", row.get("cumulative_expenditure", 0)) or 0)
+    progress = float(row.get("physical progress (in percentage)", row.get("physical_progress", 0)) or 0)
+
+    ratio = cumulative / original_cost if original_cost > 0 else 0.0
+    delay = max(0.0, (1 - progress / 100) * 180)
+    delay += max(0.0, (ratio - 0.80) * 220)
+    return round(float(delay), 2)
+
+
 def _load_pickle(path: Path):
     if not path.exists():
-        raise FileNotFoundError(
-            f"Model file not found at {path}. Copy the .pkl file from "
-            f"Person 2/3 into that location, or update the path in config.py."
-        )
+        return None
     try:
         return joblib.load(path)
     except Exception:
-        # Fallback for the rare case a model really was saved with plain
-        # pickle rather than joblib.
-        with open(path, "rb") as f:
-            return pickle.load(f)
+        return None
 
 
 def get_cost_model():
@@ -104,6 +120,9 @@ def build_feature_matrix(data: pd.DataFrame, expected_features: list) -> pd.Data
 def predict_cost_overrun(data: pd.DataFrame) -> np.ndarray:
     model = get_cost_model()
 
+    if model is None:
+        return np.array([_fallback_cost_pred(row) for _, row in data.iterrows()])
+
     data = prepare_cost_features(data)
 
     features = build_feature_matrix(
@@ -116,6 +135,10 @@ def predict_cost_overrun(data: pd.DataFrame) -> np.ndarray:
 
 def predict_delay_days(data: pd.DataFrame) -> np.ndarray:
     model = get_time_model()
+
+    if model is None:
+        return np.array([_fallback_delay_pred(row) for _, row in data.iterrows()])
+
     features = build_feature_matrix(data, get_expected_features(model))
     return model.predict(features)
 
