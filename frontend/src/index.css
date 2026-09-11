@@ -1,45 +1,157 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  font-family: 'Inter', 'Segoe UI', sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #1e2d3b;
-  background: #edf5f3;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
+  --color-ink: #142033;
+  --color-paper: #ededE7;
+  --color-blueprint: #2B5797;
+  --color-brick: #B3441E;
+  --color-ochre: #C08A2E;
+  --color-moss: #3F6B4F;
+  --color-steel: #5C728A;
 }
 
 html {
-  scroll-behavior: smooth;
+  background: linear-gradient(180deg, #eff1ee 0%, #ece9e0 100%);
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background: #edf5f3;
-}
-
-button,
-input {
-  font: inherit;
+  @apply font-body text-ink antialiased;
+  background: transparent;
 }
 
 #root {
   min-height: 100vh;
 }
 
-h1,
-h2,
-h3,
-h4,
-p {
-  margin-top: 0;
+::selection {
+  background-color: #2b5797;
+  color: #ededE7;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid rgba(20, 32, 51, 0.12);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 18px 35px rgba(20, 32, 51, 0.08);
+}
+
+.soft-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(20, 32, 51, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #5c728a;
+}
+
+.page-header {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.page-header h1 {
+  @apply font-display text-3xl leading-tight tracking-tight;
+}
+
+.page-header p {
+  @apply text-sm text-steel;
+}
+
+.field-input {
+  width: 100%;
+  border: 1px solid rgba(20, 32, 51, 0.18);
+  background: rgba(255, 255, 255, 0.18);
+  padding: 0.75rem 0.9rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field-input:focus {
+  border-color: rgba(43, 87, 151, 0.78);
+  box-shadow: 0 0 0 3px rgba(43, 87, 151, 0.1);
+  outline: none;
+}
+
+.markdown-content {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #142033;
+}
+
+.markdown-content > * + * {
+  margin-top: 0.8rem;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  @apply font-display text-ink tracking-tight;
+  margin-bottom: 0.25rem;
+}
+
+.markdown-content h1 {
+  font-size: 1.5rem;
+}
+
+.markdown-content h2 {
+  font-size: 1.2rem;
+}
+
+.markdown-content h3 {
+  font-size: 1.05rem;
+}
+
+.markdown-content p {
+  margin: 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-left: 1.2rem;
+  padding-left: 0.5rem;
+}
+
+.markdown-content li + li {
+  margin-top: 0.35rem;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content code {
+  background: rgba(20, 32, 51, 0.06);
+  border: 1px solid rgba(20, 32, 51, 0.12);
+  border-radius: 0.4rem;
+  padding: 0.12rem 0.38rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.85em;
+}
+
+.markdown-content pre {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  background: rgba(20, 32, 51, 0.95);
+  color: #f5f7fa;
+  padding: 0.9rem 1rem;
+}
+
+.markdown-content a {
+  color: #2b5797;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.blueprint-rule {
+  border-top: 1px solid rgba(20, 32, 51, 0.15);
 }

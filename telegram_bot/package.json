@@ -1,0 +1,19 @@
+{
+  "name": "paimana-telegram-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone alert service for PAIMANA. Sends Telegram messages when the frontend reports a High-risk prediction, or when a user clicks the manual alert button. Independent of api.py and the Spring Boot backend.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

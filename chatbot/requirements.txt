@@ -6,3 +6,5 @@ xgboost
 lightgbm
 scikit-learn
 joblib
+fastapi
+uvicorn
