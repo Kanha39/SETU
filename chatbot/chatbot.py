@@ -1,5 +1,5 @@
 from chatbot.entity_extractor import extract_entities
-from chatbot.retrieval import find_direct_match, filter_projects, add_risk_columns
+from chatbot.retrieval import find_direct_match, find_semantic_match, filter_projects, add_risk_columns
 from chatbot.similar_projects import find_similar_past_projects
 from chatbot.context_builder import build_context_block, build_similar_projects_block
 from chatbot.gemini_client import call_gemini
@@ -23,28 +23,37 @@ def answer_query(user_message: str, user_project_row: dict = None, history: list
         context_block = _with_similar_projects(context_block, df_proj.iloc[0])
         return call_gemini(user_message, context_block, history=history)
 
-    # 2. Try to find an exact project code or name
+    # 2. Try Chroma semantic search first. If Chroma is unavailable or
+    # returns no results, fall back to the existing direct/fuzzy matching.
+    semantic_matches = find_semantic_match(user_message, top_n=top_n)
+    if not semantic_matches.empty:
+        semantic_matches = add_risk_columns(semantic_matches)
+        context_block = build_context_block(semantic_matches, len(semantic_matches))
+        context_block = _with_similar_projects(context_block, semantic_matches.iloc[0])
+        return call_gemini(user_message, context_block, history=history)
+
+    # 3. Try to find an exact project code or name
     direct_matches = find_direct_match(user_message, top_n=top_n)
     if not direct_matches.empty:
         direct_matches = add_risk_columns(direct_matches)
         context_block = build_context_block(direct_matches, len(direct_matches))
         context_block = _with_similar_projects(context_block, direct_matches.iloc[0])
         return call_gemini(user_message, context_block, history=history)
- 
-    # 3. Extract keywords (sector, state, etc.)
+
+    # 4. Extract keywords (sector, state, etc.)
     entities = extract_entities(user_message)
     
     # Check if any specific filters/keywords were actually found
     has_filters = any(v for k, v in entities.items() if v)
 
-    # 4. FOLLOW-UP DETECTION FIX
+    # 5. FOLLOW-UP DETECTION FIX
     # If no exact match and no keywords are found, it's a follow-up question (like "tell me more").
     # If we have chat history, we skip the search so we don't overwrite the memory with random projects.
     if not has_filters and history and len(history) > 0:
         context_block = "[NO NEW SEARCH PERFORMED. PLEASE REFER TO THE PROJECT DATA IN OUR PREVIOUS MESSAGES TO ANSWER THIS FOLLOW-UP QUESTION.]"
         return call_gemini(user_message, context_block, history=history)
 
-    # 5. Standard fallback search
+    # 6. Standard fallback search
     matches, total_matches = filter_projects(entities, top_n=top_n)
     context_block = build_context_block(matches, total_matches)
  

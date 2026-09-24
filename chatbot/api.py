@@ -10,6 +10,8 @@ from chatbot.risk import compute_cost_risk_tier, compute_time_risk_tier, compute
 from chatbot.chatbot import answer_query
 from chatbot.config import COST_OVERRUN_PRED_COL, DELAY_PRED_COL
 import chatbot.predictions_summary as summary_api
+from chatbot.questionnaire_mitigation import generate_mitigation_strategies
+
 
 app = FastAPI(title="PAIMANA MVP Backend")
 
@@ -54,6 +56,19 @@ class ChatRequest(BaseModel):
     # {"role": "user" | "model", "text": "..."}
     # NOTE: role must be "user" or "model" (Gemini's naming), not "assistant".
     history: Optional[List[Dict[str, str]]] = None
+
+
+class QuestionnaireRequest(BaseModel):
+    session_id: str
+    project_name: str
+    land_acquisition: str
+    financial_result: str
+    approval_clearance: str
+    procurement_result: str
+    scope_design: str
+    execution_pace: str
+    interagency_coordination: str
+    created_at: Optional[str] = None
 
 
 # --- ENDPOINTS ---
@@ -176,12 +191,40 @@ def get_sector_risk():
     return df_sector.to_dict(orient="records")
 
 
-@app.get("/api/dashboard/top-risky")
-def get_top_risky():
-    df_top = summary_api.get_top_risky_projects(10)
-    df_top = df_top.fillna("").to_dict(orient="records")  # clean NaNs for JSON
-    return df_top
+@app.get("/api/dashboard/mega-projects")
+def get_mega_projects():
+    """Return mega-project totals and the top 10 projects by original cost.
 
+    Threshold: original_cost_cr >= 10000 crore.
+    This currently reads from the historical CSV and can later be switched
+    to MySQL using the same filter logic when the data source changes.
+    """
+    return summary_api.get_mega_project_summary()
+
+
+@app.post("/api/project/mitigation")
+def project_mitigation(req: QuestionnaireRequest):
+    try:
+        answers = {
+            "land_acquisition": req.land_acquisition,
+            "financial_result": req.financial_result,
+            "approval_clearance": req.approval_clearance,
+            "procurement_result": req.procurement_result,
+            "scope_design": req.scope_design,
+            "execution_pace": req.execution_pace,
+            "interagency_coordination": req.interagency_coordination,
+        }
+
+        result = generate_mitigation_strategies(answers)
+
+        return {
+            "session_id": req.session_id,
+            "project_name": req.project_name,
+            "created_at": req.created_at,
+            "mitigation_stratergies": result["strategies"],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Mitigation generation failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

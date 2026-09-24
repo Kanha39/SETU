@@ -6,6 +6,38 @@ import pandas as pd
 from chatbot.config import COST_OVERRUN_PRED_COL
 from chatbot.data_loader import df
 from chatbot.risk import compute_risk_tier, compute_cost_risk_tier, compute_time_risk_tier
+
+
+def find_semantic_match(query: str, top_n: int = 5) -> pd.DataFrame:
+    """Try Chroma semantic search first, then return an empty DataFrame
+    if the vector backend is unavailable or returns no results.
+    """
+    try:
+        from chatbot.vector_retrieval import semantic_search
+
+        result = semantic_search(query, top_k=top_n)
+        ids = result.get("ids", [])
+        if not ids:
+            return pd.DataFrame()
+
+        # Chroma returns a nested list for the first query result.
+        if isinstance(ids, list) and ids and isinstance(ids[0], list):
+            ids = ids[0]
+
+        if not ids:
+            return pd.DataFrame()
+
+        project_codes = pd.Series(ids, dtype=str)
+        matched = df[df["project_code"].astype(str).isin(project_codes)].copy()
+        if matched.empty:
+            return pd.DataFrame()
+
+        order_map = {code: idx for idx, code in enumerate(project_codes.tolist())}
+        matched["_semantic_order"] = matched["project_code"].astype(str).map(order_map)
+        matched = matched.sort_values("_semantic_order", ascending=True)
+        return matched.head(top_n).drop(columns=["_semantic_order"])
+    except Exception:
+        return pd.DataFrame()
  
 
 _STOPWORDS = {
