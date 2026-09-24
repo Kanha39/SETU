@@ -50,8 +50,8 @@ class ProjectForm(BaseModel):
     target_doc: Optional[str] = None
 
 class ChatRequest(BaseModel):
-    session_id: str
-    message: str
+    session_id: Optional[str] = None
+    message: Optional[str] = None
 
 # --- ENDPOINTS ---
 
@@ -153,26 +153,41 @@ def predict_project(form: ProjectForm):
     }
 
 
-@app.post("/api/chat")
-def chat(req: ChatRequest):
-    """Handles chat messages, using memory and user's project context."""
-    if req.session_id not in chat_history_db:
-        raise HTTPException(status_code=404, detail="Session not found")
-        
-    history = chat_history_db[req.session_id]
-    user_project = user_projects_db.get(req.session_id)
+def _handle_chat_message(session_id: Optional[str], message: Optional[str]):
+    if not message or not message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    normalized_session_id = session_id or str(uuid.uuid4())
+    history = chat_history_db.get(normalized_session_id, [])
+    user_project = user_projects_db.get(normalized_session_id)
 
     try:
-        # Call the updated chatbot function
-        answer = answer_query(req.message, user_project_row=user_project, history=history)
-        
-        # Save to memory
-        history.append({"role": "user", "text": req.message})
-        history.append({"role": "model", "text": answer})
-        
+        answer = answer_query(message.strip(), user_project_row=user_project, history=history)
+
+        if session_id:
+            if normalized_session_id not in chat_history_db:
+                chat_history_db[normalized_session_id] = []
+            history = chat_history_db[normalized_session_id]
+            history.append({"role": "user", "text": message.strip()})
+            history.append({"role": "model", "text": answer})
+
         return {"answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat")
+def chat(req: ChatRequest):
+    """Handles chat messages, using memory and user's project context."""
+    return _handle_chat_message(session_id=req.session_id, message=req.message)
+
+
+@app.post("/api/chatbot/query")
+def chatbot_query(payload: dict):
+    """Frontend-compatible chatbot endpoint used by the React app."""
+    session_id = payload.get("session_id") or payload.get("sessionId")
+    message = payload.get("question") or payload.get("message") or payload.get("text")
+    return _handle_chat_message(session_id=session_id, message=message)
 
 
 @app.post("/api/telegram/alert")

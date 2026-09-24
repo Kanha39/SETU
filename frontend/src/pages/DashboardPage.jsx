@@ -39,17 +39,11 @@ export default function DashboardPage() {
         setLoading(true);
         setError("");
 
-        const [riskRes, sectorRes, topRes] = await Promise.all([
-          apiClient.get("/api/dashboard/risk-summary").catch((err) => {
-            throw new Error(`Risk summary failed: ${err.message}`);
-          }),
-          apiClient.get("/api/dashboard/sector-risk").catch((err) => {
-            throw new Error(`Sector risk failed: ${err.message}`);
-          }),
-          apiClient.get("/api/dashboard/top-risky").catch((err) => {
-            throw new Error(`Top risky projects failed: ${err.message}`);
-          }),
-        ]);
+        const summaryPromise = apiClient.get("/api/dashboard/summary").catch(() => apiClient.get("/api/dashboard/risk-summary"));
+        const sectorPromise = apiClient.get("/api/dashboard/sector-risk").catch(() => []);
+        const topRiskyPromise = apiClient.get("/api/dashboard/top-risky").catch(() => []);
+
+        const [riskRes, sectorRes, topRes] = await Promise.all([summaryPromise, sectorPromise, topRiskyPromise]);
 
         if (!active) return;
 
@@ -130,13 +124,23 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
-      <h1 className="font-display text-3xl">Risk dashboard</h1>
-      <p className="mt-2 text-sm text-steel">
-        Live view of predicted risk across every project in the dataset.
-      </p>
+    <div className="space-y-8">
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="border-b border-slate-100 pb-3">
+          <span className="border-b-2 border-[#D4AF37] pb-1 text-xs font-bold uppercase tracking-wider text-[#002B49]">
+            Risk Dashboard
+          </span>
+        </div>
 
-      <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mt-4">
+          <h1 className="text-2xl font-bold text-[#002B49]">Project risk dashboard</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Live view of predicted risk across every project in the dataset.
+          </p>
+        </div>
+      </section>
+
+      <div className="grid gap-5 md:grid-cols-3">
         <StatCard label="Total projects scored" value={totalProjects} />
         <StatCard
           label="High risk projects"
@@ -146,9 +150,9 @@ export default function DashboardPage() {
         <StatCard label="Sectors covered" value={sectorsCovered} />
       </div>
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-2">
-        <div className="border border-ink/15 bg-white/40 p-6">
-          <h2 className="mb-4 font-display text-lg">Overall risk distribution</h2>
+      <div className="grid gap-10 lg:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-bold text-[#002B49]">Overall risk distribution</h2>
           {pieData.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
@@ -169,20 +173,20 @@ export default function DashboardPage() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-[260px] items-center justify-center text-sm text-steel">
+            <div className="flex h-[260px] items-center justify-center text-sm text-slate-600">
               No risk summary data available.
             </div>
           )}
         </div>
 
-        <div className="border border-ink/15 bg-white/40 p-6">
-          <h2 className="mb-4 font-display text-lg">Risk by sector</h2>
+        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-bold text-[#002B49]">Risk by sector</h2>
           {sectorRisk.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={sectorRisk} layout="vertical" margin={{ left: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="sector" width={110} tick={{ fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis type="number" tick={{ fill: "#475569", fontSize: 11 }} />
+                <YAxis type="category" dataKey="sector" width={110} tick={{ fill: "#475569", fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
                 {TIER_ORDER.map((tier) => (
@@ -196,37 +200,37 @@ export default function DashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-[260px] items-center justify-center text-sm text-steel">
+            <div className="flex h-[260px] items-center justify-center text-sm text-slate-600">
               No sector risk data available.
             </div>
           )}
         </div>
       </div>
 
-      <div className="mt-10 border border-ink/15 bg-white/40 p-6">
-        <h2 className="mb-4 font-display text-lg">Top 10 highest-risk projects</h2>
+      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-bold text-[#002B49]">Top 10 highest-risk projects</h2>
 
         {topRisky.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-ink/15 text-left text-xs text-steel">
-                  <th className="py-2 pr-4">Project</th>
-                  <th className="py-2 pr-4">Sector</th>
-                  <th className="py-2 pr-4">State</th>
-                  <th className="py-2 pr-4">Risk</th>
+                <tr className="border-b border-slate-200 bg-[#FFFDF8] text-left text-xs uppercase text-slate-500">
+                  <th className="py-2.5 px-3">Project</th>
+                  <th className="py-2.5 px-3">Sector</th>
+                  <th className="py-2.5 px-3">State</th>
+                  <th className="py-2.5 px-3">Risk</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {topRisky.map((row) => (
-                  <tr key={`${row.project_code || row.project_name}-${row.sector || "sector"}`} className="border-b border-ink/10">
-                    <td className="py-2.5 pr-4">
-                      <p>{row.project_name || "Unnamed project"}</p>
-                      <p className="font-mono text-xs text-steel">{row.project_code || "N/A"}</p>
+                  <tr key={`${row.project_code || row.project_name}-${row.sector || "sector"}`} className="hover:bg-slate-50">
+                    <td className="py-3 px-3">
+                      <p className="font-semibold text-[#002B49]">{row.project_name || "Unnamed project"}</p>
+                      <p className="font-mono text-xs text-slate-500">{row.project_code || "N/A"}</p>
                     </td>
-                    <td className="py-2.5 pr-4">{row.sector || "Not available"}</td>
-                    <td className="py-2.5 pr-4">{row.state || "Not available"}</td>
-                    <td className="py-2.5 pr-4">
+                    <td className="py-3 px-3 text-slate-600">{row.sector || "Not available"}</td>
+                    <td className="py-3 px-3 text-slate-600">{row.state || "Not available"}</td>
+                    <td className="py-3 px-3">
                       <RiskBadge tier={row._risk_tier || "Unknown"} />
                     </td>
                   </tr>
@@ -235,7 +239,7 @@ export default function DashboardPage() {
             </table>
           </div>
         ) : (
-          <div className="text-sm text-steel">No top risky projects available at the moment.</div>
+          <div className="text-sm text-slate-600">No top risky projects available at the moment.</div>
         )}
       </div>
     </div>
