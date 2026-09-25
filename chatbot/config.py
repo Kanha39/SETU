@@ -39,6 +39,8 @@ COST_MODEL_PATH = MODEL_DIR / "cost_model.pkl"
 TIME_MODEL_PATH = MODEL_DIR / "time_model.pkl"
 
 MODEL_NAME = "gemini-3.6-flash"
+GROQ_MODEL_NAME = "llama-3.3-70b-versatile"
+OPENROUTER_MODEL_NAME = "meta-llama/llama-3.3-70b-instruct:free"
 
 
 COST_OVERRUN_PRED_COL = "predicted_overrun"
