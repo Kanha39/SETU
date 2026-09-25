@@ -11,6 +11,8 @@ import DashboardPage from "./pages/DashboardPage.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
 import MinistryPage from "./pages/MinistryPage.jsx";
 import SectorPage from "./pages/SectorPage.jsx";
+import AboutPage from "./pages/AboutPage.jsx";
+import ImportantLinksPage from "./pages/ImportantLinksPage.jsx";
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ export default function App() {
           <Route path="/chatbot" element={<ChatPage />} />
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/links" element={<ImportantLinksPage />} />
           <Route path="/auth" element={<AuthPage />} />
         </Routes>
       </main>

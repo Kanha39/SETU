@@ -39,7 +39,7 @@ export default function DashboardPage() {
         setLoading(true);
         setError("");
 
-        const summaryPromise = apiClient.get("/api/dashboard/summary").catch(() => apiClient.get("/api/dashboard/risk-summary"));
+        const summaryPromise = apiClient.get("/api/dashboard/risk-summary");
         const sectorPromise = apiClient.get("/api/dashboard/sector-risk").catch(() => []);
         const topRiskyPromise = apiClient.get("/api/dashboard/top-risky").catch(() => []);
 
@@ -105,7 +105,8 @@ export default function DashboardPage() {
   );
 
   const totalHigh = Number(riskSummary?.High || 0);
-  const sectorsCovered = sectorRisk.length;
+  const totalMedium = Number(riskSummary?.Medium || 0);
+  const totalLow = Number(riskSummary?.Low || 0);
 
   if (loading) {
     return (
@@ -135,19 +136,20 @@ export default function DashboardPage() {
         <div className="mt-4">
           <h1 className="text-2xl font-bold text-[#002B49]">Project risk dashboard</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Live view of predicted risk across every project in the dataset.
+            Live view of predicted risk across all 18,601 central infrastructure projects in the MoSPI dataset.
           </p>
         </div>
       </section>
 
-      <div className="grid gap-5 md:grid-cols-3">
-        <StatCard label="Total projects scored" value={totalProjects} />
+      <div className="grid gap-5 md:grid-cols-4">
+        <StatCard label="Total projects scored" value={totalProjects ? totalProjects.toLocaleString() : 0} />
         <StatCard
           label="High risk projects"
-          value={totalHigh}
-          sub="Auto-alerted on Telegram at submission time"
+          value={totalHigh ? totalHigh.toLocaleString() : 0}
+          sub="Auto-alerted on Telegram"
         />
-        <StatCard label="Sectors covered" value={sectorsCovered} />
+        <StatCard label="Medium risk projects" value={totalMedium ? totalMedium.toLocaleString() : 0} />
+        <StatCard label="Low risk projects" value={totalLow ? totalLow.toLocaleString() : 0} />
       </div>
 
       <div className="grid gap-10 lg:grid-cols-2">

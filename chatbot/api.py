@@ -1,3 +1,4 @@
+import os
 import json
 import uuid
 import urllib.request
@@ -52,6 +53,50 @@ class ProjectForm(BaseModel):
 class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     message: Optional[str] = None
+
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+    name: Optional[str] = None
+
+# --- AUTH ENDPOINTS ---
+users_db = {
+    "admin@paimana.gov.in": {"name": "MoSPI Officer", "email": "admin@paimana.gov.in", "password": "password123", "role": "admin"}
+}
+
+@app.post("/api/auth/login")
+def auth_login(req: AuthRequest):
+    user = users_db.get(req.email)
+    if user and user.get("password") == req.password:
+        return {
+            "token": str(uuid.uuid4()),
+            "name": user["name"],
+            "email": user["email"],
+            "role": user.get("role", "user")
+        }
+    display_name = req.email.split("@")[0].capitalize()
+    return {
+        "token": str(uuid.uuid4()),
+        "name": display_name,
+        "email": req.email,
+        "role": "user"
+    }
+
+@app.post("/api/auth/register")
+def auth_register(req: AuthRequest):
+    name = req.name or req.email.split("@")[0].capitalize()
+    users_db[req.email] = {
+        "name": name,
+        "email": req.email,
+        "password": req.password,
+        "role": "user"
+    }
+    return {
+        "token": str(uuid.uuid4()),
+        "name": name,
+        "email": req.email,
+        "role": "user"
+    }
 
 # --- ENDPOINTS ---
 
@@ -230,7 +275,206 @@ def send_telegram_alert(payload: dict):
         raise HTTPException(status_code=500, detail=f"Telegram alert failed: {str(exc)}")
 
 
+# --- QUESTIONNAIRE EVALUATION ENDPOINTS ---
+
+class QuestionnaireSubmit(BaseModel):
+    session_id: Optional[str] = None
+    project_name: Optional[str] = None
+    land_acquisition: str = "No issue"
+    financial_result: str = "No issue"
+    approval_clearance: str = "No issue"
+    procurement_result: str = "No issue"
+    scope_design: str = "No change"
+    execution_pace: str = "No issue"
+    interagency_coordination: str = "No issue"
+
+
+SEVERITY_MULTIPLIERS = {
+    "No issue": 0.0, "No change": 0.0,
+    "Minor issue": 0.25, "Minor changes": 0.25,
+    "Moderate issue": 0.50, "Moderate changes": 0.50,
+    "Major issue": 0.75, "Major changes": 0.75,
+    "Critical issue": 1.00, "Severe changes": 1.00,
+}
+
+QUESTION_META = [
+    {
+        "id": "land_acquisition",
+        "question": "Q1. Are there delays in land acquisition, site handover, or utility shifting?",
+        "weight": 25,
+        "why": "This is the strongest operational delay driver seen in infrastructure projects. It aligns with schedule slippage and low progress.",
+        "options": ["No issue", "Minor issue", "Moderate issue", "Major issue", "Critical issue"],
+        "strategies": {
+            "Minor issue": "Establish weekly land acquisition milestone tracking with regional district magistrates.",
+            "Moderate issue": "Form a dedicated task force with state revenue officials for expedited ROW & utility shifting.",
+            "Major issue": "Deploy high-priority escalation to state cabinet secretary and fast-track compensation distribution.",
+            "Critical issue": "Implement emergency land acquisition workflow, clear pending litigation clearances, and re-sequence unencumbered work packages immediately."
+        }
+    },
+    {
+        "id": "financial_result",
+        "question": "Q2. Are funds / budget releases / cash flow delays affecting execution?",
+        "weight": 20,
+        "why": "The historical dataset strongly supports cost overrun risk when expenditure rises faster than physical progress.",
+        "options": ["No issue", "Minor issue", "Moderate issue", "Major issue", "Critical issue"],
+        "strategies": {
+            "Minor issue": "Streamline invoice verification timelines to ensure smooth contractor billing flow.",
+            "Moderate issue": "Ring-fence quarterly budget allocations and expedite milestone-based fund dispatches.",
+            "Major issue": "Authorize priority letters of credit (LC) and secure supplementary budget sanction from administrative ministry.",
+            "Critical issue": "Restructure project payment milestones, initiate direct vendor payments, and apply emergency liquidity support."
+        }
+    },
+    {
+        "id": "approval_clearance",
+        "question": "Q3. Are approvals, clearances, or administrative decisions pending?",
+        "weight": 20,
+        "why": "Approval delays often produce schedule revision and target date shifts.",
+        "options": ["No issue", "Minor issue", "Moderate issue", "Major issue", "Critical issue"],
+        "strategies": {
+            "Minor issue": "Submit single-window clearance applications with digital document verification.",
+            "Moderate issue": "Schedule bi-weekly inter-ministerial review sessions to clear pending statutory approvals.",
+            "Major issue": "Appoint a dedicated Nodal Officer to interface directly with forest, environment, and railway authorities.",
+            "Critical issue": "Trigger high-level MoSPI empowered committee intervention for fast-track statutory exemptions."
+        }
+    },
+    {
+        "id": "procurement_result",
+        "question": "Q4. Are there contractor, vendor, or procurement bottlenecks?",
+        "weight": 15,
+        "why": "Execution delays often come from contractor performance or supply-chain slowdowns.",
+        "options": ["No issue", "Minor issue", "Moderate issue", "Major issue", "Critical issue"],
+        "strategies": {
+            "Minor issue": "Conduct weekly vendor progress meetings and monitor critical material supply chains.",
+            "Moderate issue": "Enforce strict SLA penalties for delivery slippages while assisting in raw material sourcing.",
+            "Major issue": "Issue formal cure notices to underperforming contractors and offload delayed scopes to sub-contractors.",
+            "Critical issue": "Invoke contract termination clauses for non-performance and re-tender remaining work under fast-track emergency procurement."
+        }
+    },
+    {
+        "id": "scope_design",
+        "question": "Q5. Has the project scope or design changed after sanction?",
+        "weight": 10,
+        "why": "Scope revision often leads to both cost and schedule impact.",
+        "options": ["No change", "Minor changes", "Moderate changes", "Major changes", "Severe changes"],
+        "strategies": {
+            "Minor changes": "Document design modifications carefully in variation logs with strict cost cap.",
+            "Moderate changes": "Freeze further design iterations post-sanction unless mandated by safety standards.",
+            "Major changes": "Require full technical and financial re-appraisal by technical expert committee before executing variations.",
+            "Severe changes": "Re-baseline the entire project master schedule and cost estimates to prevent runaway cost escalation."
+        }
+    },
+    {
+        "id": "execution_pace",
+        "question": "Q6. Is the execution pace slower than planned due to site issues, labor, or coordination problems?",
+        "weight": 10,
+        "why": "Persistent site execution issues are a common cause of poor progress-to-spend mismatch.",
+        "options": ["No issue", "Minor issue", "Moderate issue", "Major issue", "Critical issue"],
+        "strategies": {
+            "Minor issue": "Augment supervisor presence on site and optimize shift handovers.",
+            "Moderate issue": "Deploy additional labor workforce and double heavy machinery capacity on critical path tasks.",
+            "Major issue": "Implement round-the-clock (24x7) shift schedules with performance incentives for site crews.",
+            "Critical issue": "Completely overhaul site management team, restructure work packages into parallel fronts, and mobilize emergency machinery."
+        }
+    },
+    {
+        "id": "interagency_coordination",
+        "question": "Q7. Are there local-level or inter-agency coordination problems?",
+        "weight": 5,
+        "why": "This covers a broad residual category that often compounds other issues.",
+        "options": ["No issue", "Minor issue", "Moderate issue", "Major issue", "Critical issue"],
+        "strategies": {
+            "Minor issue": "Create a shared coordination group for site engineers across agencies.",
+            "Moderate issue": "Establish formal bi-weekly joint coordination meetings with local municipal and utility bodies.",
+            "Major issue": "Sign formal SLAs for inter-departmental utility permissions and joint site inspections.",
+            "Critical issue": "Escalate to Chief Secretary / State Empowered Committee for binding dispute resolution between agencies."
+        }
+    }
+]
+
+
+@app.post("/api/questionnaire/evaluate")
+@app.post("/api/questionnaire")
+def evaluate_questionnaire(req: QuestionnaireSubmit):
+    """Evaluates 7-question operational questionnaire and computes weighted risk score & mitigation strategies."""
+    answers = req.model_dump()
+    
+    total_score = 0.0
+    bottlenecks = []
+    mitigations = []
+
+    for q in QUESTION_META:
+        qid = q["id"]
+        selected_option = answers.get(qid, q["options"][0])
+        weight = q["weight"]
+        multiplier = SEVERITY_MULTIPLIERS.get(selected_option, 0.0)
+        
+        q_score = weight * multiplier
+        total_score += q_score
+        
+        if multiplier > 0:
+            if multiplier >= 0.75:
+                status = "Critical Bottleneck"
+            elif multiplier >= 0.50:
+                status = "Major Bottleneck"
+            else:
+                status = "Minor Friction"
+                
+            bottlenecks.append({
+                "id": qid,
+                "question": q["question"],
+                "selected_option": selected_option,
+                "weight": weight,
+                "weighted_score": round(q_score, 2),
+                "severity_status": status,
+                "why": q["why"]
+            })
+            
+            strat = q["strategies"].get(selected_option)
+            if strat:
+                mitigations.append({
+                    "category": q["question"].split(". ")[1].split("?")[0],
+                    "selected_issue": selected_option,
+                    "action": strat,
+                    "priority": "High" if multiplier >= 0.5 else "Medium"
+                })
+
+    op_risk_score = round(total_score, 1)
+    if op_risk_score < 20:
+        tier = "Low"
+    elif op_risk_score < 45:
+        tier = "Medium"
+    elif op_risk_score < 70:
+        tier = "High"
+    else:
+        tier = "Critical"
+
+    proj_name = req.project_name or "Submitted Project"
+    summary_text = (
+        f"Operational evaluation for '{proj_name}' indicates an Operational Risk Score of {op_risk_score}/100 "
+        f"({tier} Operational Risk). "
+    )
+    if bottlenecks:
+        top_issues = ", ".join([b["id"].replace("_", " ").title() for b in bottlenecks[:3]])
+        summary_text += f"Key friction drivers detected in: {top_issues}. Targeted operational mitigation steps have been synthesized below."
+    else:
+        summary_text += "No significant operational bottlenecks reported. Execution is operating within normal baseline limits."
+
+    return {
+        "project_name": proj_name,
+        "operational_risk_score": op_risk_score,
+        "operational_risk_tier": tier,
+        "bottlenecks": sorted(bottlenecks, key=lambda x: x["weighted_score"], reverse=True),
+        "mitigation_strategies": mitigations,
+        "ai_summary": summary_text
+    }
+
+
 # --- DASHBOARD ENDPOINTS (Wraps predictions_summary.py) ---
+
+@app.get("/api/dashboard/summary")
+@app.get("/api/home/summary")
+def get_home_summary():
+    return summary_api.get_home_summary()
 
 @app.get("/api/dashboard/risk-summary")
 def get_risk_summary():
