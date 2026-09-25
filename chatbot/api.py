@@ -1,7 +1,7 @@
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List, Dict, Any
 
 # Import your existing ML and Chatbot modules
@@ -179,27 +179,8 @@ def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/chat")
-def chat(req: ChatRequest):
-    """Handles chat messages, using memory and user's project context."""
-    return _handle_chat_message(session_id=req.session_id, message=req.message)
-
-
-@app.post("/api/chatbot/query")
-def chatbot_query(payload: dict):
-    """Frontend-compatible chatbot endpoint used by the React app."""
-    session_id = payload.get("session_id") or payload.get("sessionId")
-    message = payload.get("question") or payload.get("message") or payload.get("text")
-    return _handle_chat_message(session_id=session_id, message=message)
-
-
 # --- DASHBOARD ENDPOINTS (read from the historical CSV dataset directly --
 # no session/state, so these need no changes for the new architecture) ---
-
-@app.get("/api/dashboard/summary")
-@app.get("/api/home/summary")
-def get_home_summary():
-    return summary_api.get_home_summary()
 
 @app.get("/api/dashboard/risk-summary")
 def get_risk_summary():
@@ -210,6 +191,12 @@ def get_risk_summary():
 def get_sector_risk():
     df_sector = summary_api.get_sector_wise_risk_summary()
     return df_sector.to_dict(orient="records")
+
+@app.get("/api/dashboard/top-risky")
+def get_top_risky():
+    df_top = summary_api.get_top_risky_projects(10)
+    df_top = df_top.fillna("").to_dict(orient="records")  # clean NaNs for JSON
+    return df_top
 
 
 @app.get("/api/dashboard/mega-projects")
