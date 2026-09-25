@@ -2,3 +2,4 @@
 dataset/
 .ipynb_checkpoints
 .venv/
+!data/processed/merged_projects.csv

@@ -1,6 +1,8 @@
 .DS_Store
 chatbot/.env
-.venv/
+.venv/m
 __pycache__/
 node_modules/
 *.py[cod]
+.vscode
+database/chroma_store

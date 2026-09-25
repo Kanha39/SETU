@@ -89,21 +89,29 @@ def _build_fallback_dataset() -> pd.DataFrame:
         ]
     )
 
+DATE_COLUMNS = ["date_of_approval", "start_date", "actual_doc", "target_doc", "revised_doc"]
 
-def load_data(path=DATA_PATH) -> pd.DataFrame:
-    path = str(path)
 
-    try:
-        df = pd.read_csv(
-            path,
-            parse_dates=["date_of_approval", "start_date", "actual_doc", "target_doc", "revised_doc"],
-            low_memory=False,
+def load_data() -> pd.DataFrame:
+    """Loads the historical projects dataset from the local merged_projects.csv
+    (DATA_PATH in config.py), instead of fetching it over HTTP from the
+    db_bridge service / MySQL. User-submitted project data and chat history
+    still go through MySQL via db.py -- this only affects the historical
+    dataset used for retrieval, filtering, and similarity search."""
+    if not DATA_PATH.exists():
+        raise RuntimeError(
+            f"Historical dataset CSV not found at {DATA_PATH}. Check "
+            "DATA_PATH in config.py, or that merged_projects.csv is "
+            "actually there."
         )
-        if df.empty:
-            return _build_fallback_dataset()
-        return df
-    except FileNotFoundError:
-        return _build_fallback_dataset()
+
+    df = pd.read_csv(DATA_PATH, low_memory=False)
+
+    for col in DATE_COLUMNS:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+
+    return df
 
 
 df = load_data()
