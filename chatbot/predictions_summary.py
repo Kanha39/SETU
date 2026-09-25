@@ -50,3 +50,37 @@ def get_top_risky_projects(top_n: int = 10) -> pd.DataFrame:
         .drop(columns=["_sort_key"])
         .head(top_n)
     )
+
+
+def get_home_summary() -> dict:
+    total_projects = len(df)
+    total_orig_cost = float(df["original_cost_cr"].sum()) if "original_cost_cr" in df.columns else 0.0
+    total_cum_exp = float(df["cumulative expenditure in rs. crore"].sum()) if "cumulative expenditure in rs. crore" in df.columns else 0.0
+    total_rev_cost = float(df["revised_cost_cr"].sum()) if "revised_cost_cr" in df.columns else 0.0
+    ministries_count = int(df["ministry"].nunique()) if "ministry" in df.columns else 0
+
+    top_high_val = df.sort_values("original_cost_cr", ascending=False).drop_duplicates(subset=["project_name"]).head(8)
+    high_val_list = []
+    for _, row in top_high_val.iterrows():
+        completion_str = "N/A"
+        if pd.notna(row.get("target_doc")):
+            completion_str = str(row.get("target_doc")).split(" ")[0].split("T")[0]
+
+        high_val_list.append({
+            "name": str(row.get("project_name", "N/A")),
+            "ministry": str(row.get("ministry") or row.get("agency") or "N/A"),
+            "sector": str(row.get("sector", "N/A")),
+            "cost": f"Rs. {row.get('original_cost_cr', 0):,.2f} Cr",
+            "progress": f"{row.get('physical progress (in percentage)', 0):.0f}%",
+            "completion": completion_str
+        })
+
+    return {
+        "total_projects": f"{total_projects:,}",
+        "total_original_cost_formatted": f"Rs. {total_orig_cost / 100000:.2f} Lakh Cr",
+        "total_expenditure_formatted": f"Rs. {total_cum_exp / 100000:.2f} Lakh Cr",
+        "total_revised_cost_formatted": f"Rs. {total_rev_cost / 100000:.2f} Lakh Cr",
+        "tracked_ministries": ministries_count,
+        "high_value_projects": high_val_list
+    }
+

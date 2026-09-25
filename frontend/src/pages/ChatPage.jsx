@@ -21,23 +21,30 @@ export default function ChatPage() {
     const text = input.trim();
     if (!text || sending) return;
 
-    if (!sessionId) {
-      setError("Please predict a project first so a chat session can be created.");
-      return;
-    }
-
-    const priorHistory = messages;
     setMessages((m) => [...m, { role: "user", text }]);
     setInput("");
     setSending(true);
     setError(null);
 
     try {
-      const { data } = await apiClient.post("/api/chat", {
-        session_id: sessionId,
-        message: text,
+      const payload = {
+        sessionId: sessionId || undefined,
+        projectId: project?.project_code || project?.id || undefined,
+        question: text,
+      };
+
+      const { data } = await apiClient.post("/api/chatbot/query", payload).catch((err) => {
+        if (err.response?.status === 404 || err.response?.status === 405) {
+          return apiClient.post("/api/chat", {
+            session_id: sessionId,
+            message: text,
+          });
+        }
+        throw err;
       });
-      setMessages((m) => [...m, { role: "model", text: data.answer }]);
+
+      const answer = data.answer || data.message || "No answer returned.";
+      setMessages((m) => [...m, { role: "model", text: answer }]);
     } catch (err) {
       setError(err.response?.data?.detail || "Couldn't reach SETU. Is the chatbot API running?");
     } finally {
@@ -46,70 +53,80 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-display text-3xl">Ask SETU</h1>
-          <p className="mt-2 text-sm text-steel">
-            Ask about any project by name or code, filter by sector, state or risk, or ask why a project is at risk.
-          </p>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="border-b border-slate-100 pb-3">
+          <span className="border-b-2 border-[#D4AF37] pb-1 text-xs font-bold uppercase tracking-wider text-[#002B49]">
+            AI Assistant
+          </span>
         </div>
 
-        {project && (
-          <button
-            type="button"
-            onClick={() => setUseProjectContext((prev) => !prev)}
-            className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-              useProjectContext
-                ? "border-ink bg-ink text-paper"
-                : "border-ink/20 bg-white/60 text-ink hover:border-ink/40"
-            }`}
-          >
-            {useProjectContext ? `Focused on ${project.project_name}` : "Focus on this project"}
-          </button>
-        )}
-      </div>
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#002B49]">Ask SETU</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Ask about any project by name or code, filter by sector, state or risk, or ask why a project is at risk.
+            </p>
+          </div>
 
-      <div className="mt-8 border border-ink/15 bg-white/40 h-[30rem] overflow-y-auto p-5 flex flex-col gap-4 rounded-3xl">
-        {messages.length === 0 && (
-          <p className="text-sm text-steel m-auto text-center max-w-xs">
-            Try “Which road projects in Bihar are at high risk?” or “Why is this project delayed?”
-          </p>
-        )}
-
-        {messages.map((m, i) => (
-          <div key={i} className={`max-w-[85%] ${m.role === "user" ? "self-end text-right" : "self-start"}`}>
-            <p className="text-[10px] text-steel mb-1">{m.role === "user" ? "You" : "SETU"}</p>
-
-            <div
-              className={`inline-block rounded-2xl px-4 py-3 text-sm text-left ${
-                m.role === "user"
-                  ? "bg-ink text-paper"
-                  : "border border-ink/15 bg-paper/80 markdown-content"
+          {project && (
+            <button
+              type="button"
+              onClick={() => setUseProjectContext((prev) => !prev)}
+              className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                useProjectContext
+                  ? "border-[#002B49] bg-[#002B49] text-white"
+                  : "border-slate-200 bg-[#FFFDF8] text-[#002B49] hover:border-[#D4AF37]"
               }`}
             >
-              <ReactMarkdown>{m.text}</ReactMarkdown>
-            </div>
-          </div>
-        ))}
+              {useProjectContext ? `Focused on ${project.project_name}` : "Focus on this project"}
+            </button>
+          )}
+        </div>
+      </section>
 
-        {sending && <p className="text-xs text-steel self-start">SETU is thinking…</p>}
-        <div ref={bottomRef} />
+      <div className="h-[30rem] overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4">
+          {messages.length === 0 && (
+            <p className="m-auto max-w-xs text-center text-sm text-slate-600">
+              Try “Which road projects in Bihar are at high risk?” or “Why is this project delayed?”
+            </p>
+          )}
+
+          {messages.map((m, i) => (
+            <div key={i} className={`max-w-[85%] ${m.role === "user" ? "self-end text-right" : "self-start"}`}>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{m.role === "user" ? "You" : "SETU"}</p>
+
+              <div
+                className={`inline-block rounded-2xl px-4 py-3 text-sm text-left ${
+                  m.role === "user"
+                    ? "bg-[#002B49] text-white"
+                    : "border border-slate-200 bg-[#FFFDF8] text-slate-700"
+                }`}
+              >
+                <ReactMarkdown>{m.text}</ReactMarkdown>
+              </div>
+            </div>
+          ))}
+
+          {sending && <p className="self-start text-xs font-medium text-slate-500">SETU is thinking…</p>}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      {error && <p className="mt-3 text-sm text-brick">{error}</p>}
+      {error && <p className="text-sm text-[#B42318]">{error}</p>}
 
-      <form onSubmit={handleSend} className="mt-4 flex gap-3">
+      <form onSubmit={handleSend} className="flex gap-3">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask a question…"
-          className="field-input flex-1 rounded-2xl"
+          className="w-full rounded-lg border border-slate-200 bg-[#FFFDF8] px-4 py-3 text-sm text-slate-700 focus:border-[#D4AF37] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20"
         />
         <button
           type="submit"
           disabled={sending}
-          className="rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper transition-colors hover:bg-blueprint disabled:opacity-50"
+          className="rounded-lg bg-[#002B49] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[#163d63] disabled:opacity-50"
         >
           Send
         </button>

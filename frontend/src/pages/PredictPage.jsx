@@ -237,7 +237,7 @@ export default function PredictPage() {
               onClick={() => navigate("/chat")}
               className="mt-6 text-sm font-medium text-blueprint underline decoration-2 underline-offset-4"
             >
-              Ask PAIMANA about this project
+              Ask SETU about this project
             </button>
           </div>
         )}
