@@ -133,19 +133,34 @@ def predict_cost_overrun(data: pd.DataFrame) -> np.ndarray:
     return model.predict(features)
 
 
+def _prepare_delay_model_inputs(data: pd.DataFrame) -> pd.DataFrame:
+    data = data.copy()
+
+    if COST_OVERRUN_PRED_COL not in data.columns:
+        data[COST_OVERRUN_PRED_COL] = predict_cost_overrun(data)
+
+    if DELAY_PRED_COL not in data.columns:
+        data[DELAY_PRED_COL] = np.array([
+            _fallback_delay_pred(row) for _, row in data.iterrows()
+        ])
+
+    return data
+
+
 def predict_delay_days(data: pd.DataFrame) -> np.ndarray:
     model = get_time_model()
 
     if model is None:
         return np.array([_fallback_delay_pred(row) for _, row in data.iterrows()])
 
+    data = _prepare_delay_model_inputs(data)
     features = build_feature_matrix(data, get_expected_features(model))
     return model.predict(features)
 
 
 def score_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    
     scored = df.copy()
-    scored[COST_OVERRUN_PRED_COL] = predict_cost_overrun(df)
-    scored[DELAY_PRED_COL] = predict_delay_days(df)
+    scored[COST_OVERRUN_PRED_COL] = predict_cost_overrun(scored)
+    scored = _prepare_delay_model_inputs(scored)
+    scored[DELAY_PRED_COL] = predict_delay_days(scored)
     return scored

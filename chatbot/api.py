@@ -179,8 +179,27 @@ def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/chat")
+def chat(req: ChatRequest):
+    """Handles chat messages, using memory and user's project context."""
+    return _handle_chat_message(session_id=req.session_id, message=req.message)
+
+
+@app.post("/api/chatbot/query")
+def chatbot_query(payload: dict):
+    """Frontend-compatible chatbot endpoint used by the React app."""
+    session_id = payload.get("session_id") or payload.get("sessionId")
+    message = payload.get("question") or payload.get("message") or payload.get("text")
+    return _handle_chat_message(session_id=session_id, message=message)
+
+
 # --- DASHBOARD ENDPOINTS (read from the historical CSV dataset directly --
 # no session/state, so these need no changes for the new architecture) ---
+
+@app.get("/api/dashboard/summary")
+@app.get("/api/home/summary")
+def get_home_summary():
+    return summary_api.get_home_summary()
 
 @app.get("/api/dashboard/risk-summary")
 def get_risk_summary():
