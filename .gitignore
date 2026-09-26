@@ -1,8 +1,10 @@
 .DS_Store
 chatbot/.env
+frontend/.env
+telegram_bot/.env
 .venv/m
 __pycache__/
-node_modules/
+frontend/node_modules/
 *.py[cod]
 .vscode
 database/chroma_store
