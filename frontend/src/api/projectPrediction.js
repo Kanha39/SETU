@@ -63,6 +63,7 @@ export async function createProjectAndGenerateRisk(form) {
       agency: project.implementingAgency,
       ministry: project.ministryName || form.ministry,
       sector: project.sectorName || form.sector,
+      state: form.state,
       original_cost_cr: project.approvedCost ?? form.original_cost_cr,
       cumulative_expenditure: project.cumulativeExpenditure ?? form.cumulative_expenditure,
       physical_progress: project.physicalProgressPercent ?? form.physical_progress,
