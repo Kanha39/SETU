@@ -8,5 +8,5 @@ numpy
 scikit-learn==1.9.1
 matplotlib
 seaborn
-xgboost==3.4.1
+xgboost
 joblib==1.6.0
