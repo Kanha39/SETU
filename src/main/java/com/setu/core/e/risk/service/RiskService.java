@@ -95,7 +95,11 @@ public class RiskService {
                 riskScore.getRiskScoreValue(),
                 riskScore.getRiskLevel().name(),
                 riskScore.getContributingFactors(),
-                riskScore.getGeneratedAt()
+                riskScore.getGeneratedAt(),
+                riskScore.getPredictedOverrunPct(),
+                riskScore.getPredictedDelayDays(),
+                riskScore.getCostRiskLevel() != null ? riskScore.getCostRiskLevel().name() : null,
+                riskScore.getTimeRiskLevel() != null ? riskScore.getTimeRiskLevel().name() : null
         );
     }
 }
