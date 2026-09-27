@@ -1,14 +1,15 @@
 import os
-import requests
 import pandas as pd
 import chromadb
+from fastembed import TextEmbedding
 
 from chatbot.config import BASE_DIR, DATA_PATH
 
-EMBEDDING_URL = os.getenv("EMBEDDING_URL", "http://localhost:11434/api/embed")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "bge-m3")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
 CHROMA_PATH = BASE_DIR / "database" / "chroma_store"
 CHROMA_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION_NAME", "projects_semantic_index")
+
+embedding_model = TextEmbedding(model_name=EMBEDDING_MODEL)
 
 client = chromadb.PersistentClient(str(CHROMA_PATH))
 collection = client.get_or_create_collection(
@@ -17,27 +18,8 @@ collection = client.get_or_create_collection(
 )
 
 def create_embeddings(text_list, batch_size=16):
-    all_embeddings = []
-
-    for i in range(0, len(text_list), batch_size):
-        batch = text_list[i:i + batch_size]
-        response = requests.post(
-            EMBEDDING_URL,
-            json={
-                "model": EMBEDDING_MODEL,
-                "input": batch
-            },
-            timeout=120
-        )
-
-        data = response.json()
-
-        if "embeddings" not in data:
-            raise RuntimeError(f"Embedding failed: {data}")
-
-        all_embeddings.extend(data["embeddings"])
-
-    return all_embeddings
+    embeddings = embedding_model.embed(text_list, batch_size=batch_size)
+    return [embedding.tolist() for embedding in embeddings]
 
 
 def build_project_text(row):
@@ -72,6 +54,7 @@ def sync_projects_to_chroma():
     documents = []
     metadatas = []
     ids = []
+    indexed_ids = set()
 
     for idx, row in df.iterrows():
         project_text = build_project_text(row)
@@ -80,8 +63,12 @@ def sync_projects_to_chroma():
             continue
 
         project_id = str(row.get("project_code") or f"project_{idx}")
+        if project_id in indexed_ids:
+            continue
+
         documents.append(project_text)
         ids.append(project_id)
+        indexed_ids.add(project_id)
 
         metadatas.append({
             "project_code": str(row.get("project_code", "")),

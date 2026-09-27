@@ -28,7 +28,9 @@ def find_semantic_match(query: str, top_n: int = 5) -> pd.DataFrame:
             return pd.DataFrame()
 
         project_codes = pd.Series(ids, dtype=str)
-        matched = df[df["project_code"].astype(str).isin(project_codes)].copy()
+        matched = df[
+            df["project_code"].astype(str).isin(project_codes)
+        ].drop_duplicates(subset=["project_code"], keep="first").copy()
         if matched.empty:
             return pd.DataFrame()
 
