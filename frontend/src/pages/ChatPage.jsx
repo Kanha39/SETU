@@ -5,7 +5,7 @@ import { useProject } from "../context/ProjectContext.jsx";
 
 export default function ChatPage() {
   const { project, sessionId } = useProject();
-  const [useProjectContext, setUseProjectContext] = useState(Boolean(project));
+  const [activeSessionId, setActiveSessionId] = useState(sessionId || null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -28,25 +28,26 @@ export default function ChatPage() {
 
     try {
       const payload = {
-        sessionId: sessionId || undefined,
-        projectId: project?.project_code || project?.id || undefined,
+        sessionId: activeSessionId || undefined,
+        projectId: project?.projectId || undefined,
         question: text,
       };
 
-      const { data } = await apiClient.post("/api/chatbot/query", payload).catch((err) => {
-        if (err.response?.status === 404 || err.response?.status === 405) {
-          return apiClient.post("/api/chat", {
-            session_id: sessionId,
-            message: text,
-          });
-        }
-        throw err;
-      });
+      const { data } = await apiClient.post("/api/chatbot/query", payload);
+
+      if (data.sessionId) setActiveSessionId(data.sessionId);
 
       const answer = data.answer || data.message || "No answer returned.";
       setMessages((m) => [...m, { role: "model", text: answer }]);
     } catch (err) {
-      setError(err.response?.data?.detail || "Couldn't reach SETU. Is the chatbot API running?");
+      console.error("Chatbot request failed:", {
+        url: err.config?.url,
+        status: err.response?.status,
+        response: err.response?.data,
+        message: err.message,
+        error: err,
+      });
+      setError("Something went wrong. Please try again.");
     } finally {
       setSending(false);
     }
@@ -69,19 +70,6 @@ export default function ChatPage() {
             </p>
           </div>
 
-          {project && (
-            <button
-              type="button"
-              onClick={() => setUseProjectContext((prev) => !prev)}
-              className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                useProjectContext
-                  ? "border-[#002B49] bg-[#002B49] text-white"
-                  : "border-slate-200 bg-[#FFFDF8] text-[#002B49] hover:border-[#D4AF37]"
-              }`}
-            >
-              {useProjectContext ? `Focused on ${project.project_name}` : "Focus on this project"}
-            </button>
-          )}
         </div>
       </section>
 

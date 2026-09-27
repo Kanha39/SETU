@@ -13,13 +13,40 @@ def _with_similar_projects(context_block: str, top_row) -> str:
     return context_block + "\n\n" + similar_block
  
  
+def _find_historical_matches(user_message: str, top_n: int):
+    semantic_matches = find_semantic_match(user_message, top_n=top_n)
+    if not semantic_matches.empty:
+        return semantic_matches, len(semantic_matches)
+
+    direct_matches = find_direct_match(user_message, top_n=top_n)
+    if not direct_matches.empty:
+        return direct_matches, len(direct_matches)
+
+    entities = extract_entities(user_message)
+    if any(value for value in entities.values()):
+        return filter_projects(entities, top_n=top_n)
+
+    return direct_matches, 0
+
+
 def answer_query(user_message: str, user_project_row: dict = None, history: list = None, top_n: int = 10) -> str:
-    # 1. If user submitted a new project via the form, inject it directly!
+    # Include both the submitted project and historical matches in the prompt.
     if user_project_row is not None:
         import pandas as pd
+
         df_proj = pd.DataFrame([user_project_row])
         df_proj = add_risk_columns(df_proj)
-        context_block = build_context_block(df_proj, 1)
+        project_block = "SUBMITTED PROJECT:\n" + build_context_block(df_proj, 1)
+
+        historical_matches, total_matches = _find_historical_matches(user_message, top_n)
+        if not historical_matches.empty:
+            historical_matches = add_risk_columns(historical_matches)
+        historical_block = "PAST HISTORICAL PROJECTS:\n" + build_context_block(
+            historical_matches,
+            total_matches,
+        )
+
+        context_block = project_block + "\n\n" + historical_block
         context_block = _with_similar_projects(context_block, df_proj.iloc[0])
         return call_llm(user_message, context_block, history=history)
 

@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useProject } from "../context/ProjectContext.jsx";
 import RiskBadge from "../components/RiskBadge.jsx";
 import apiClient from "../api/client.js";
+import { sendManualAlert } from "../api/telegramClient.js";
+import { formatCrore, formatPercent } from "../utils/formatters.js";
 
 const QUESTIONS = [
   {
@@ -57,7 +59,7 @@ const QUESTIONS = [
 ];
 
 export default function ProjectAnalysisPage() {
-  const { project, predictions, sessionId } = useProject();
+  const { project, predictions } = useProject();
 
   const [answers, setAnswers] = useState({
     land_acquisition: "No issue",
@@ -72,6 +74,9 @@ export default function ProjectAnalysisPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [evaluation, setEvaluation] = useState(null);
+  const [alertNote, setAlertNote] = useState("");
+  const [alertStatus, setAlertStatus] = useState("");
+  const [sendingAlert, setSendingAlert] = useState(false);
 
   const evaluationRef = useRef(null);
 
@@ -99,6 +104,22 @@ export default function ProjectAnalysisPage() {
     }));
   };
 
+  const handleManualAlert = async () => {
+    setSendingAlert(true);
+    setAlertStatus("");
+
+    try {
+      await sendManualAlert(project, predictions, alertNote);
+      setAlertStatus("Alert sent to Telegram.");
+      setAlertNote("");
+    } catch (err) {
+      console.error("Manual Telegram alert failed:", err);
+      setAlertStatus("The alert could not be sent. Please try again.");
+    } finally {
+      setSendingAlert(false);
+    }
+  };
+
   const handleQuestionnaireSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -106,13 +127,27 @@ export default function ProjectAnalysisPage() {
 
     try {
       const payload = {
-        session_id: sessionId,
-        project_name: project.project_name,
-        ...answers
+        projectName: project.project_name,
+        landAcquisition: answers.land_acquisition,
+        financialResult: answers.financial_result,
+        approvalClearance: answers.approval_clearance,
+        procurementResult: answers.procurement_result,
+        scopeDesign: answers.scope_design,
+        executionPace: answers.execution_pace,
+        interagencyCoordination: answers.interagency_coordination,
       };
 
-      const { data } = await apiClient.post("/api/questionnaire/evaluate", payload);
-      setEvaluation(data);
+      const { data: questionnaire } = await apiClient.post("/api/mitigation/questionnaire", payload);
+      const { data } = await apiClient.post("/api/mitigation/generate", {
+        projectName: questionnaire.projectName,
+        sessionId: questionnaire.sessionId,
+      });
+      const strategies = data.mitigation_strategies || data.mitigation_stratergies || [data.mitigationStrategy].filter(Boolean);
+
+      setEvaluation({
+        project_name: data.project_name || project.project_name,
+        mitigation_strategies: strategies,
+      });
 
       setTimeout(() => {
         evaluationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -121,16 +156,6 @@ export default function ProjectAnalysisPage() {
       setError(err.response?.data?.detail || "Questionnaire submission failed. Please try again.");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const getTierClass = (tier) => {
-    switch (tier?.toLowerCase()) {
-      case "low": return "tier-pill--low";
-      case "medium": return "tier-pill--medium";
-      case "high": return "tier-pill--high";
-      case "critical": return "tier-pill--critical";
-      default: return "tier-pill--medium";
     }
   };
 
@@ -152,11 +177,11 @@ export default function ProjectAnalysisPage() {
         <div className="stats-grid stats-grid--compact">
           <div className="metric-tile">
             <span>Predicted overrun</span>
-            <strong>{predictions.predicted_overrun_pct}%</strong>
+            <strong>{predictions.predicted_overrun_pct ?? "Not available"}{predictions.predicted_overrun_pct !== null && predictions.predicted_overrun_pct !== undefined ? "%" : ""}</strong>
           </div>
           <div className="metric-tile">
             <span>Predicted delay</span>
-            <strong>{predictions.predicted_delay_days} days</strong>
+            <strong>{predictions.predicted_delay_days ?? "Not available"}{predictions.predicted_delay_days !== null && predictions.predicted_delay_days !== undefined ? " days" : ""}</strong>
           </div>
           <div className="metric-tile">
             <span>Sector</span>
@@ -174,9 +199,9 @@ export default function ProjectAnalysisPage() {
             <dl>
               <div><dt>Agency</dt><dd>{project.agency || "—"}</dd></div>
               <div><dt>Ministry</dt><dd>{project.ministry || "—"}</dd></div>
-              <div><dt>Original cost</dt><dd>{project.original_cost_cr || "—"}</dd></div>
-              <div><dt>Expenditure</dt><dd>{project.cumulative_expenditure || "—"}</dd></div>
-              <div><dt>Physical progress</dt><dd>{project.physical_progress || "—"}</dd></div>
+              <div><dt>Original cost (₹ Cr)</dt><dd>{formatCrore(project.original_cost_cr)}</dd></div>
+              <div><dt>Expenditure (₹ Cr)</dt><dd>{formatCrore(project["cumulative expenditure in rs. crore"] ?? project.cumulative_expenditure)}</dd></div>
+              <div><dt>Physical progress</dt><dd>{formatPercent(project["physical progress (in percentage)"] ?? project.physical_progress)}</dd></div>
               <div><dt>Approval date</dt><dd>{project.date_of_approval || "—"}</dd></div>
             </dl>
           </div>
@@ -195,6 +220,26 @@ export default function ProjectAnalysisPage() {
               <Link to="/dashboard" className="secondary-btn">
                 Dashboard
               </Link>
+            </div>
+            <div className="mt-6 border-t border-slate-200 pt-5">
+              <h4 className="font-semibold text-[#002B49]">Send Telegram alert</h4>
+              <p className="mt-1 text-sm text-slate-600">Notify the team manually, regardless of the project risk value.</p>
+              <textarea
+                value={alertNote}
+                onChange={(event) => setAlertNote(event.target.value)}
+                placeholder="Add a note for the team (optional)"
+                rows={3}
+                className="field-input mt-3 w-full resize-y"
+              />
+              <button
+                type="button"
+                onClick={handleManualAlert}
+                disabled={sendingAlert}
+                className="primary-btn mt-3"
+              >
+                {sendingAlert ? "Sending alert..." : "Send Telegram alert"}
+              </button>
+              {alertStatus && <p className="mt-2 text-sm text-slate-600">{alertStatus}</p>}
             </div>
           </div>
         </div>
@@ -257,65 +302,17 @@ export default function ProjectAnalysisPage() {
             <div className="eval-header">
               <div>
                 <span style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.7)" }}>
-                  Operational Assessment Result
+                  Mitigation Strategies
                 </span>
                 <h2 style={{ margin: "0.25rem 0 0", fontSize: "1.8rem", color: "#ffffff" }}>
-                  {evaluation.project_name} Operational Diagnosis
+                  {evaluation.project_name}
                 </h2>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="eval-score-box">
-                  <span className="eval-score-num">{evaluation.operational_risk_score}</span>
-                  <span className="eval-score-total">/ 100</span>
-                </div>
-                <span className={`tier-pill ${getTierClass(evaluation.operational_risk_tier)}`}>
-                  {evaluation.operational_risk_tier} Operational Risk
-                </span>
-              </div>
             </div>
 
-            {/* AI / EXECUTIVE SUMMARY */}
-            <div className="ai-summary-box">
-              <h3>Executive Strategic Insights</h3>
-              <p>{evaluation.ai_summary}</p>
-            </div>
-
-            {/* BOTTLENECKS IDENTIFIED */}
-            <div className="mb-6">
-              <h3 style={{ fontSize: "1.1rem", color: "#D4AF37", marginBottom: "0.75rem", fontWeight: 700 }}>
-                Identified Bottlenecks & Friction Drivers ({evaluation.bottlenecks.length})
-              </h3>
-              {evaluation.bottlenecks.length === 0 ? (
-                <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.95rem" }}>
-                  No operational bottlenecks were flagged for this project.
-                </p>
-              ) : (
-                <div className="grid gap-3">
-                  {evaluation.bottlenecks.map((b) => (
-                    <div key={b.id} className="bottleneck-item">
-                      <div>
-                        <strong style={{ fontSize: "1rem", color: "#ffffff", display: "block" }}>
-                          {b.question}
-                        </strong>
-                        <span style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.7)", marginTop: "0.2rem", display: "inline-block" }}>
-                          Selected Status: <strong>{b.selected_option}</strong> &bull; Weight: {b.weight}
-                        </span>
-                      </div>
-                      <div className="text-right whitespace-nowrap">
-                        <span style={{ fontSize: "0.75rem", textTransform: "uppercase", padding: "0.25rem 0.6rem", borderRadius: "0.4rem", background: b.weighted_score >= 15 ? "rgba(239,68,68,0.3)" : "rgba(234,179,8,0.3)", color: "#ffffff", fontWeight: 700 }}>
-                          {b.severity_status} (+{b.weighted_score} pts)
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ACTIONABLE MITIGATION STRATEGIES */}
             <div>
               <h3 style={{ fontSize: "1.1rem", color: "#D4AF37", marginBottom: "0.75rem", fontWeight: 700 }}>
-                Tailored Mitigation Action Plan ({evaluation.mitigation_strategies.length})
+                Recommended actions ({evaluation.mitigation_strategies.length})
               </h3>
               {evaluation.mitigation_strategies.length === 0 ? (
                 <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.95rem" }}>
@@ -325,16 +322,8 @@ export default function ProjectAnalysisPage() {
                 <div>
                   {evaluation.mitigation_strategies.map((m, idx) => (
                     <div key={idx} className="mitigation-item">
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
-                        <strong style={{ fontSize: "0.95rem", color: "#D4AF37" }}>
-                          Area: {m.category} ({m.selected_issue})
-                        </strong>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: "999px", background: m.priority === "High" ? "rgba(239,68,68,0.2)" : "rgba(59,130,246,0.2)", color: "#ffffff" }}>
-                          {m.priority} Priority
-                        </span>
-                      </div>
                       <p style={{ margin: 0, fontSize: "0.92rem", color: "rgba(255,255,255,0.9)", lineHeight: 1.5 }}>
-                        {m.action}
+                        {m}
                       </p>
                     </div>
                   ))}

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ActionCard from "../components/cards/ActionCard.jsx";
 import { useProject } from "../context/ProjectContext.jsx";
-import apiClient from "../api/client.js";
+import mlClient from "../api/mlClient.js";
+import { formatCrore, formatPercent } from "../utils/formatters.js";
 
 export default function HomePage() {
   const { project } = useProject();
@@ -13,7 +14,7 @@ export default function HomePage() {
     async function fetchHomeData() {
       try {
         setLoading(true);
-        const { data } = await apiClient.get("/api/dashboard/mega-projects");
+        const { data } = await mlClient.get("/api/dashboard/mega-projects");
         setSummary(data);
       } catch (err) {
         console.error("Failed to load home summary data:", err);
@@ -26,8 +27,8 @@ export default function HomePage() {
 
   const statsList = summary ? [
     { label: "Total Mega Infrastructure Projects", value: summary.total_mega_projects },
-    { label: "Total Original Cost", value: summary.totals.original_cost_cr },
-    { label: "Total Cumulative Expenditure", value: summary.totals["cumulative expenditure in rs. crore"] },
+    { label: "Total Original Cost (₹ Cr)", value: formatCrore(summary.totals.original_cost_cr) },
+    { label: "Total Cumulative Expenditure (₹ Cr)", value: formatCrore(summary.totals["cumulative expenditure in rs. crore"]) },
   ] : [
     { label: "Total Mega Infrastructure Projects", value: "Loading..." },
     { label: "Total Original Cost", value: "Loading..." },
@@ -72,11 +73,11 @@ export default function HomePage() {
 
           <div className="rounded-md border border-slate-100 bg-[#FFFDF8] p-4">
             <p className="text-2xl font-bold text-[#002B49]">
-              {loading ? "..." : (summary?.totals.revised_cost_cr || "—")}
+              {loading ? "..." : formatCrore(summary?.totals.revised_cost_cr)}
             </p>
             <p className="text-xs font-semibold text-slate-500">Latest Revised Total Cost</p>
             <ul className="mt-3 space-y-1 text-xs text-slate-600">
-              <li>• Total Progress: <strong>{summary?.totals["physical progress (in percentage)"] || "—"}</strong></li>
+              <li>• Total Progress: <strong>{formatPercent(summary?.totals["physical progress (in percentage)"])}</strong></li>
               <li>• Tracked Ministries: <strong>{summary?.tracked_ministries || 17} Union Departments</strong></li>
               <li>• Live Dataset: <strong>MoSPI Processed Pipeline</strong></li>
             </ul>
@@ -120,13 +121,13 @@ export default function HomePage() {
                   <tr key={i} className="hover:bg-slate-50">
                     <td className="py-3 px-3 font-semibold text-[#002B49]">{proj.project_name}</td>
                     <td className="py-3 px-3 text-slate-600">{proj.agency}</td>
-                    <td className="py-3 px-3 font-mono text-slate-700">{proj.original_cost_cr}</td>
+                    <td className="py-3 px-3 font-mono text-slate-700">{formatCrore(proj.original_cost_cr)}</td>
                     <td className="py-3 px-3">
                       <span className="inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-bold text-[#002B49]">
-                        {proj["physical progress (in percentage)"]}
+                        {formatPercent(proj["physical progress (in percentage)"])}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-slate-600">{proj["cumulative expenditure in rs. crore"]}</td>
+                    <td className="py-3 px-3 text-slate-600">{formatCrore(proj["cumulative expenditure in rs. crore"])} </td>
                   </tr>
                 ))}
               </tbody>

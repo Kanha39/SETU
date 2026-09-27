@@ -5,4 +5,15 @@ const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+apiClient.interceptors.request.use((config) => {
+  const savedUser = localStorage.getItem("setu-user");
+  const token = savedUser ? JSON.parse(savedUser).token : null;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
 export default apiClient;

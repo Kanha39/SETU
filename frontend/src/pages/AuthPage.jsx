@@ -8,6 +8,7 @@ export default function AuthPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
   const { loginUser } = useProject();
 
@@ -20,6 +21,7 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
 
     try {
       const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
@@ -27,28 +29,30 @@ export default function AuthPage() {
         ? { email: form.email, password: form.password }
         : { name: form.name, email: form.email, password: form.password };
 
-      let userData;
-      try {
-        const { data } = await apiClient.post(endpoint, payload);
-        userData = {
-          token: data.token || "token-123",
-          name: data.name || form.name || form.email.split("@")[0],
-          email: data.email || form.email,
-          role: data.role || "user",
-        };
-      } catch (apiErr) {
-        userData = {
-          token: "session-" + Date.now(),
-          name: form.name || form.email.split("@")[0],
-          email: form.email,
-          role: "user",
-        };
+      const { data } = await apiClient.post(endpoint, payload);
+
+      if (mode === "register") {
+        setMode("login");
+        setForm((previous) => ({
+          name: "",
+          email: previous.email,
+          password: "",
+        }));
+        setMessage("Account created. Please log in.");
+        return;
       }
+
+      const userData = {
+        token: data.token,
+        name: data.name || form.email.split("@")[0],
+        email: data.email || form.email,
+        role: data.role || "USER",
+      };
 
       loginUser(userData);
       navigate("/");
     } catch (err) {
-      setError("Authentication failed. Please check your credentials.");
+      setError(err.response?.data?.message || err.response?.data || "Authentication failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -123,6 +127,7 @@ export default function AuthPage() {
           </label>
 
           {error && <p className="text-sm font-medium text-[#B42318]">{error}</p>}
+          {message && <p className="text-sm font-medium text-[#3F6B4F]">{message}</p>}
 
           <button type="submit" disabled={loading} className="w-full rounded bg-[#002B49] px-4 py-3 text-sm font-bold text-white disabled:opacity-60">
             {loading ? "Please wait..." : mode === "login" ? "Login" : "Create account"}

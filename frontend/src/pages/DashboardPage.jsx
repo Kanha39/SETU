@@ -12,7 +12,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import apiClient from "../api/client.js";
+import mlClient from "../api/mlClient.js";
 import StatCard from "../components/StatCard.jsx";
 import RiskBadge from "../components/RiskBadge.jsx";
 
@@ -39,9 +39,9 @@ export default function DashboardPage() {
         setLoading(true);
         setError("");
 
-        const summaryPromise = apiClient.get("/api/dashboard/risk-summary");
-        const sectorPromise = apiClient.get("/api/dashboard/sector-risk").catch(() => []);
-        const topRiskyPromise = apiClient.get("/api/dashboard/top-risky").catch(() => []);
+        const summaryPromise = mlClient.get("/api/dashboard/risk-summary");
+        const sectorPromise = mlClient.get("/api/dashboard/sector-risk").catch(() => []);
+        const topRiskyPromise = mlClient.get("/api/dashboard/top-risky").catch(() => []);
 
         const [riskRes, sectorRes, topRes] = await Promise.all([summaryPromise, sectorPromise, topRiskyPromise]);
 

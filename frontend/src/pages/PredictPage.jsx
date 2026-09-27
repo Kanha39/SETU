@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import apiClient from "../api/client.js";
+import { createProjectAndGenerateRisk } from "../api/projectPrediction.js";
 import { sendHighRiskAlert, sendManualAlert } from "../api/telegramClient.js";
 import { useProject } from "../context/ProjectContext.jsx";
 import RiskBadge from "../components/RiskBadge.jsx";
@@ -48,22 +48,14 @@ export default function PredictPage() {
         physical_progress: Number(form.physical_progress),
       };
 
-      const { data } = await apiClient.post("/api/predict", payload);
-
-      const submittedProject = data.project_data || {
-        ...payload,
-        project_code: "NEW-USER-PROJECT",
-        "cumulative expenditure in rs. crore": payload.cumulative_expenditure,
-        "physical progress (in percentage)": payload.physical_progress,
-      };
-
-      setSubmittedProject(submittedProject, data.predictions, data.session_id);
+      const result = await createProjectAndGenerateRisk(payload);
+      setSubmittedProject(result.project, result.predictions, null);
 
       // Auto-alert trigger point: lives here in the frontend, right where
       // the risk tier first becomes known -- api.py itself is untouched.
-      if (data.predictions.overall_risk_tier === "High") {
+      if (result.predictions.overall_risk_tier === "High") {
         try {
-          await sendHighRiskAlert(submittedProject, data.predictions);
+          await sendHighRiskAlert(result.project, result.predictions);
           setAlertStatus("High risk detected — the team was notified on Telegram automatically.");
         } catch (alertErr) {
           setAlertStatus(
