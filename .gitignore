@@ -5,6 +5,7 @@ telegram_bot/.env
 .venv/m
 __pycache__/
 frontend/node_modules/
+telegram_bot/node_modules/
 *.py[cod]
 .vscode
 database/chroma_store
