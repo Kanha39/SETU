@@ -20,6 +20,12 @@ function findId(items, value) {
   return match?.id ?? match?.ministryId ?? match?.sectorId ?? null;
 }
 
+function normalizeRiskTier(value) {
+  if (!value) return "Unknown";
+  const text = String(value).toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export async function createProjectAndGenerateRisk(form) {
   const [ministriesResult, sectorsResult] = await Promise.allSettled([
     apiClient.get("/api/ministries"),
@@ -52,9 +58,9 @@ export async function createProjectAndGenerateRisk(form) {
   const predictions = {
     predicted_overrun_pct: modelPredictions.predicted_overrun_pct ?? modelPredictions.predictedOverrunPct ?? null,
     predicted_delay_days: modelPredictions.predicted_delay_days ?? modelPredictions.predictedDelayDays ?? null,
-    cost_risk_tier: modelPredictions.cost_risk_tier ?? modelPredictions.costRiskLevel ?? "Unknown",
-    time_risk_tier: modelPredictions.time_risk_tier ?? modelPredictions.timeRiskLevel ?? "Unknown",
-    overall_risk_tier: modelPredictions.overall_risk_tier ?? modelPredictions.overallRiskTier ?? "Unknown",
+    cost_risk_tier: normalizeRiskTier(modelPredictions.cost_risk_tier ?? modelPredictions.costRiskLevel),
+    time_risk_tier: normalizeRiskTier(modelPredictions.time_risk_tier ?? modelPredictions.timeRiskLevel),
+    overall_risk_tier: normalizeRiskTier(modelPredictions.overall_risk_tier ?? modelPredictions.overallRiskTier),
   };
 
   return {
