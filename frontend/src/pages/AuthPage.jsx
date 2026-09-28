@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import apiClient from "../api/client.js";
 import { useProject } from "../context/ProjectContext.jsx";
 
@@ -10,6 +10,7 @@ export default function AuthPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const { loginUser } = useProject();
 
   const handleChange = (e) => {
@@ -50,7 +51,7 @@ export default function AuthPage() {
       };
 
       loginUser(userData);
-      navigate("/");
+      navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data || "Authentication failed. Please check your credentials.");
     } finally {

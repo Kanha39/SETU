@@ -32,7 +32,10 @@ export function ProjectProvider({ children }) {
   };
 
   const loginUser = (userData) => setUser(userData);
-  const logoutUser = () => setUser(null);
+  const logoutUser = () => {
+    setUser(null);
+    clearProject();
+  };
 
   return (
     <ProjectContext.Provider value={{

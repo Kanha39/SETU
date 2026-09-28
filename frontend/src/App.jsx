@@ -13,6 +13,7 @@ import MinistryPage from "./pages/MinistryPage.jsx";
 import SectorPage from "./pages/SectorPage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ImportantLinksPage from "./pages/ImportantLinksPage.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 export default function App() {
   return (
@@ -21,14 +22,14 @@ export default function App() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/projects/new" element={<ProjectFormPage />} />
-          <Route path="/projects/analysis" element={<ProjectAnalysisPage />} />
-          <Route path="/projects/:projectId" element={<ProjectOverviewPage />} />
-          <Route path="/projects/:projectId/risk" element={<ProjectRiskPage />} />
-          <Route path="/projects/:projectId/risk/latest" element={<ProjectRiskPage />} />
+          <Route path="/projects/new" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
+          <Route path="/projects/analysis" element={<ProtectedRoute><ProjectAnalysisPage /></ProtectedRoute>} />
+          <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectOverviewPage /></ProtectedRoute>} />
+          <Route path="/projects/:projectId/risk" element={<ProtectedRoute><ProjectRiskPage /></ProtectedRoute>} />
+          <Route path="/projects/:projectId/risk/latest" element={<ProtectedRoute><ProjectRiskPage /></ProtectedRoute>} />
           <Route path="/ministries" element={<MinistryPage />} />
           <Route path="/sectors" element={<SectorPage />} />
-          <Route path="/chatbot" element={<ChatPage />} />
+          <Route path="/chatbot" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/about" element={<AboutPage />} />
