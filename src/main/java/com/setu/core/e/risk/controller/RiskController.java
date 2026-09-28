@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/projects/{projectId}/risk")
 public class RiskController {
@@ -15,7 +17,7 @@ public class RiskController {
     private RiskService riskService;
 
     @PostMapping("/generate")
-    public ResponseEntity<RiskScoreDTO> generate(@PathVariable Long projectId) {
+    public ResponseEntity<Map<String, Object>> generate(@PathVariable Long projectId) {
         return ResponseEntity.ok(riskService.generateRiskScore(projectId));
     }
 

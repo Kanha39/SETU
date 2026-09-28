@@ -5,7 +5,6 @@ import com.setu.core.c.project.entity.Project;
 import com.setu.core.c.project.repository.ProjectRepository;
 import com.setu.core.e.risk.client.MLServiceClient;
 import com.setu.core.e.risk.dto.MLRequestDTO;
-import com.setu.core.e.risk.dto.MLResponseDTO;
 import com.setu.core.e.risk.dto.RiskScoreDTO;
 import com.setu.core.e.risk.entity.RiskLevel;
 import com.setu.core.e.risk.entity.RiskScore;
@@ -14,6 +13,8 @@ import com.setu.core.g.alert.service.AlertService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 public class RiskService {
@@ -32,36 +33,48 @@ public class RiskService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public RiskScoreDTO generateRiskScore(Long projectId) {
+    // Saves what we need locally, but returns the model's response exactly as received.
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> generateRiskScore(Long projectId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found"));
 
-        MLRequestDTO request = buildRequest(project);
-        MLResponseDTO response = mlServiceClient.getRiskPrediction(request);
-        MLResponseDTO.Predictions predictions = response.getPredictions();
+        Map<String, Object> raw = mlServiceClient.getRiskPrediction(buildRequest(project));
+
+        if (raw == null || !(raw.get("predictions") instanceof Map)) {
+            throw new IllegalStateException("ML service returned no prediction");
+        }
+        Map<String, Object> predictions = (Map<String, Object>) raw.get("predictions");
+
+        double overrunPct = toDouble(predictions.get("predicted_overrun_pct"));
+        double delayDays = toDouble(predictions.get("predicted_delay_days"));
+        String costTier = String.valueOf(predictions.get("cost_risk_tier"));
+        String timeTier = String.valueOf(predictions.get("time_risk_tier"));
+        String overallTier = String.valueOf(predictions.get("overall_risk_tier"));
 
         RiskScore riskScore = new RiskScore();
         riskScore.setProject(project);
-        riskScore.setRiskScoreValue(predictions.getPredicted_overrun_pct() * 100);
-        riskScore.setRiskLevel(RiskLevel.valueOf(predictions.getOverall_risk_tier().toUpperCase()));
-        riskScore.setPredictedOverrunPct(predictions.getPredicted_overrun_pct());
-        riskScore.setPredictedDelayDays(predictions.getPredicted_delay_days());
-        riskScore.setCostRiskLevel(RiskLevel.valueOf(predictions.getCost_risk_tier().toUpperCase()));
-        riskScore.setTimeRiskLevel(RiskLevel.valueOf(predictions.getTime_risk_tier().toUpperCase()));
-        riskScore.setContributingFactors(String.format("Cost risk: %s, Time risk: %s, Predicted delay: %.0f days",
-                predictions.getCost_risk_tier(), predictions.getTime_risk_tier(), predictions.getPredicted_delay_days()));
+        riskScore.setRiskScoreValue(overrunPct * 100);
+        riskScore.setRiskLevel(RiskLevel.valueOf(overallTier.toUpperCase()));
+        riskScore.setPredictedOverrunPct(overrunPct);
+        riskScore.setPredictedDelayDays(delayDays);
+        riskScore.setCostRiskLevel(RiskLevel.valueOf(costTier.toUpperCase()));
+        riskScore.setTimeRiskLevel(RiskLevel.valueOf(timeTier.toUpperCase()));
+        riskScore.setContributingFactors(String.format(
+                "Cost risk: %s, Time risk: %s, Predicted delay: %.0f days",
+                costTier, timeTier, delayDays));
         riskScore.setModelVersion("v1.0");
 
         try {
-            riskScore.setMlProjectDataJson(objectMapper.writeValueAsString(response.getProject_data()));
+            riskScore.setMlProjectDataJson(objectMapper.writeValueAsString(raw.get("project_data")));
         } catch (Exception e) {
             riskScore.setMlProjectDataJson(null);
         }
 
-        RiskScore saved = riskScoreRepository.save(riskScore);
+        riskScoreRepository.save(riskScore);
         alertService.evaluateAndCreateAlert(project, riskScore.getRiskLevel(), riskScore.getRiskScoreValue());
 
-        return toDTO(saved);
+        return raw;
     }
 
     public RiskScoreDTO getLatestRiskScore(Long projectId) {
@@ -70,6 +83,10 @@ public class RiskService {
                 .orElseThrow(() -> new IllegalArgumentException("No risk score found for this project"));
 
         return toDTO(riskScore);
+    }
+
+    private double toDouble(Object value) {
+        return value instanceof Number ? ((Number) value).doubleValue() : 0.0;
     }
 
     private MLRequestDTO buildRequest(Project project) {
