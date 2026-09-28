@@ -47,13 +47,14 @@ export async function createProjectAndGenerateRisk(form) {
   const { data: risk } = await apiClient.post(
     `/api/projects/${project.projectId}/risk/generate`,
   );
+  const modelPredictions = risk.predictions || risk;
 
   const predictions = {
-    predicted_overrun_pct: risk.predictedOverrunPct ?? null,
-    predicted_delay_days: risk.predictedDelayDays ?? null,
-    cost_risk_tier: risk.costRiskLevel ?? "Unknown",
-    time_risk_tier: risk.timeRiskLevel ?? "Unknown",
-    overall_risk_tier: risk.riskLevel ?? "Unknown",
+    predicted_overrun_pct: modelPredictions.predicted_overrun_pct ?? modelPredictions.predictedOverrunPct ?? null,
+    predicted_delay_days: modelPredictions.predicted_delay_days ?? modelPredictions.predictedDelayDays ?? null,
+    cost_risk_tier: modelPredictions.cost_risk_tier ?? modelPredictions.costRiskLevel ?? "Unknown",
+    time_risk_tier: modelPredictions.time_risk_tier ?? modelPredictions.timeRiskLevel ?? "Unknown",
+    overall_risk_tier: modelPredictions.overall_risk_tier ?? modelPredictions.overallRiskTier ?? "Unknown",
   };
 
   return {

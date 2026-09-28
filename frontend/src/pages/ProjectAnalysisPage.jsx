@@ -58,6 +58,33 @@ const QUESTIONS = [
   }
 ];
 
+function normalizeMitigationStrategies(response) {
+  const value = response?.mitigation_strategies
+    || response?.mitigation_stratergies
+    || response?.mitigationStrategy;
+
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+
+  if (typeof value === "object") {
+    return value.mitigation_strategies || value.mitigation_stratergies || [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+    return parsed.mitigation_strategies || parsed.mitigation_stratergies || [];
+  } catch {
+    const listMatch = value.match(/mitigation_stratergies\s*[=:]\s*\[(.*)\]\s*}/s);
+    if (!listMatch) return [value];
+
+    return listMatch[1]
+      .split(/,\s+(?=[A-Z])/)
+      .map((strategy) => strategy.replace(/^['"]|['"]$/g, "").trim())
+      .filter(Boolean);
+  }
+}
+
 export default function ProjectAnalysisPage() {
   const { project, predictions } = useProject();
 
@@ -142,10 +169,10 @@ export default function ProjectAnalysisPage() {
         projectName: questionnaire.projectName,
         sessionId: questionnaire.sessionId,
       });
-      const strategies = data.mitigation_strategies || data.mitigation_stratergies || [data.mitigationStrategy].filter(Boolean);
+      const strategies = normalizeMitigationStrategies(data);
 
       setEvaluation({
-        project_name: data.project_name || project.project_name,
+        project_name: data.projectName || data.project_name || project.project_name,
         mitigation_strategies: strategies,
       });
 
