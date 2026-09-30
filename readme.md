@@ -1,49 +1,53 @@
-# PAIMANA Project README
+# SETU
 
-PAIMANA is a project risk monitoring and prediction platform for infrastructure projects. It combines a React frontend, a FastAPI backend, ML-based project risk prediction, a chatbot assistant, and optional Telegram alerting.
+SETU is a full-stack infrastructure project monitoring and risk intelligence platform for public-sector projects. The repository combines a Java Spring Boot application, a React frontend, a Python ML/AI service, and a Telegram alert bot.
 
-## 1. Project Overview
+This project is not a single monolithic backend. The main application logic lives in `PAIMANA-backend/` and the AI/ML prediction layer lives in `chatbot/`.
 
-### Core objectives
-- Predict cost overrun and delay risk for ongoing projects
-- Show dashboard summaries for risk distribution and top risky projects
-- Allow users to ask contextual questions through the chatbot
-- Support project-level risk analysis with historical comparable projects
-- Send Telegram alerts when a project is flagged as high risk
+## Project overview
 
-### Main components
-- Frontend: `frontend/`
-- Backend API: `chatbot/api.py`
-- Chatbot logic: `chatbot/chatbot.py`
-- Model inference and scoring: `chatbot/model_inference.py`
-- Risk calculation: `chatbot/risk.py`
-- Historical data source: `ml-pipeline/data/processed/merged_projects.csv`
-- ML model training scripts: `ml-pipeline/src/`
-- Telegram bot service: `telegram_bot/`
+SETU helps teams to:
+- register and manage infrastructure projects
+- generate risk scores for cost and time overruns
+- track project status, ministry, sector, implementation agency, and delivery health
+- view dashboard summaries of project risk distribution
+- ask project-specific questions through a chatbot
+- generate mitigation strategies from a questionnaire
+- raise Telegram alerts for high-risk projects
 
----
+## Architecture
 
-## 2. Architecture
+The repository contains four major runtime components:
 
-### High-level flow
-1. User enters a project in the frontend prediction form.
-2. Frontend sends data to `POST /api/predict` on the FastAPI backend.
-3. Backend prepares the feature row, runs the saved ML models, computes risk tiers, and stores session state.
-4. Dashboard endpoints read processed summary data and return charts / tables.
-5. Chatbot uses the user’s submitted project context and historical data to answer questions.
-6. Telegram bot can send alerts when high-risk predictions are detected.
+1. Java Spring Boot application
+   - Path: `PAIMANA-backend/`
+   - Purpose: primary app backend for auth, user sessions, project CRUD, risk generation, dashboard summary, chatbot orchestration, mitigation logic, and alerts
+   - Technology: Java 17, Spring Boot 4, Spring Security, Spring Data JPA, MySQL, JWT
 
-### Current implementation notes
-- The backend currently uses the processed CSV (`ml-pipeline/data/processed/merged_projects.csv`) as the historical retrieval dataset for chat context and comparable projects.
-- MySQL / database connectivity is not the main retrieval path in the current MVP; the app uses the CSV-based processed data for fast historical lookup and the backend keeps session state in memory.
-- If MySQL is later used for persistent application data, the backend can be extended to query it while keeping the current CSV-based retrieval logic for similarity access.
+2. React frontend
+   - Path: `frontend/`
+   - Purpose: user interface for login, project intake, dashboard, risk analysis, chatbot, and alerts
+   - Technology: React, Vite, React Router, Axios, Recharts, Tailwind CSS
 
----
+3. Python AI + ML service
+   - Path: `chatbot/`
+   - Purpose: exposes prediction and chatbot APIs used by the Spring Boot layer
+   - Technology: FastAPI, Python, Pandas, NumPy, Scikit-learn, XGBoost, LightGBM, ChromaDB, Gemini API
 
-## 3. Repository Structure
+4. Telegram alert service
+   - Path: `telegram_bot/`
+   - Purpose: sends project alerts to a configured Telegram channel/chat
+   - Technology: Node.js, Express, dotenv
+
+## Repository structure
 
 ```text
 SIH_PAIMANA/
+├── PAIMANA-backend/
+│   ├── src/
+│   ├── pom.xml
+│   ├── mvnw
+│   └── mvnw.cmd
 ├── chatbot/
 │   ├── api.py
 │   ├── chatbot.py
@@ -52,17 +56,25 @@ SIH_PAIMANA/
 │   ├── data_loader.py
 │   ├── db.py
 │   ├── entity_extractor.py
-│   ├── gemini_client.py
+│   ├── llm_client.py
+│   ├── migrate_csv_to_mysql.py
 │   ├── model_inference.py
 │   ├── predictions_summary.py
+│   ├── questionnaire_mitigation.py
+│   ├── requirements.txt
 │   ├── retrieval.py
 │   ├── risk.py
-│   ├── requirements.txt
-│   └── schema.sql
+│   ├── schema.sql
+│   └── similar_projects.py
+├── database/
+│   └── chroma_store/
 ├── frontend/
+│   ├── public/
 │   ├── src/
+│   ├── README.md
 │   ├── package.json
-│   ├── .env
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
 │   └── vite.config.js
 ├── ml-pipeline/
 │   ├── data/
@@ -72,388 +84,338 @@ SIH_PAIMANA/
 │   └── requirements.txt
 ├── telegram_bot/
 │   ├── server.js
+│   ├── src/
 │   ├── package.json
-│   └── .env
-├── docs/
-├── config/
-├── database/
-├── tests/
+│   └── .env.example
 ├── .venv/
 ├── readme.md
-└── .gitignore
+├── .gitignore
+└── .python-version
 ```
 
----
+## Core technical stack
 
-## 4. Tech Stack
+### Spring Boot backend
+- Java 17
+- Spring Boot 4
+- Spring Security
+- Spring Data JPA / JDBC
+- MySQL / H2 support
+- JWT authentication
+- WebClient for downstream service calls
+- OpenAPI / Swagger support
 
 ### Frontend
-- React
+- React 18
 - Vite
 - React Router
 - Recharts
 - Axios
-- React Markdown
+- Tailwind CSS
 
-### Backend
+### Python ML / chatbot service
+- Python 3.10+
 - FastAPI
-- Python
 - Pydantic
-- Pandas
-- NumPy
-- Joblib
+- Pandas, NumPy
 - Scikit-learn
 - XGBoost
 - LightGBM
-- Gemini API integration
+- Joblib
+- Gemini / Google GenAI
+- ChromaDB
 
-### Optional supporting services
-- Telegram bot server (`telegram_bot/server.js`)
-- MySQL / database layer (for future persistence)
-- Ngrok for temporary external exposure
+### Telegram bot
+- Node.js 18+
+- Express
+- dotenv
+- CORS
 
----
+## Actual backend flow in this repo
 
-## 5. Environment Setup
+The app follows a multi-service design:
 
-### Python environment
-Use the existing project virtual environment if available:
+1. Frontend sends requests to the Spring Boot app in `PAIMANA-backend`.
+2. Spring Boot handles authentication, project creation, and user project records.
+3. When a project needs risk scoring, Spring Boot calls the Python ML API through `MLServiceClient`.
+4. For chatbot responses, Spring Boot calls the Python chatbot endpoint through `ChatbotServiceClient`.
+5. The Python service returns prediction/chat answers and Spring Boot persists and returns the result to the frontend.
+6. Telegram alerts are triggered by the standalone `telegram_bot` service.
+
+This means the Spring Boot backend is the main application backend, while `chatbot/api.py` is an AI/ML service consumed by the Java app.
+
+## Important Spring Boot details
+
+The Spring Boot app is configured to run on port 8080 and uses environment variables such as:
+
+```properties
+server.port=${PORT:8080}
+
+spring.datasource.url=${SPRING_DATASOURCE_URL:...}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:...}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:...}
+
+jwt.secret=${JWT_SECRET:...}
+ml.service.base-url=${ML_SERVICE_BASE_URL:...}
+chatbot.service.base-url=${CHATBOT_SERVICE_BASE_URL:...}
+```
+
+The app also includes security rules, JWT filters, and protected API endpoints.
+
+## Main Spring Boot endpoints
+
+The Java backend exposes the following core routes:
+
+### Authentication
+```http
+POST /api/auth/register
+POST /api/auth/login
+```
+
+### Project management
+```http
+POST /api/projects
+GET /api/projects
+GET /api/projects/{projectId}
+PUT /api/projects/{projectId}
+```
+
+### Risk generation
+```http
+POST /api/projects/{projectId}/risk/generate
+GET /api/projects/{projectId}/risk/latest
+```
+
+### Chatbot
+```http
+POST /api/chatbot/query
+GET /api/chatbot/sessions
+GET /api/chatbot/sessions/{sessionId}/messages
+```
+
+### Dashboard
+```http
+GET /api/dashboard/summary
+```
+
+### Mitigation
+```http
+POST /api/mitigation/questionnaire
+POST /api/mitigation/generate
+GET /api/mitigation/{projectName}/{sessionId}/strategies
+```
+
+### Alerts
+```http
+GET /api/alerts
+POST /api/alerts/{alertId}/acknowledge
+```
+
+## Python FastAPI endpoints
+
+The Python service in `chatbot/` exposes its own API layer:
+
+### Health and general checks
+```http
+GET /api/health
+```
+
+### ML prediction
+```http
+POST /api/predict
+```
+
+### Chatbot answer generation
+```http
+POST /api/chat
+```
+
+### Dashboard summary
+```http
+GET /api/dashboard/risk-summary
+GET /api/dashboard/sector-risk
+GET /api/dashboard/top-risky
+GET /api/dashboard/mega-projects
+```
+
+### Mitigation generation
+```http
+POST /api/project/mitigation
+```
+
+## Frontend API configuration
+
+The frontend uses axios clients with environment variables:
+
+```js
+baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+```
+
+This is important because the frontend can talk to the Python FastAPI service directly for ML/dashboard functions, while the Java backend is the core application layer. The frontend also talks to the Telegram bot separately:
+
+```js
+baseURL: import.meta.env.VITE_TELEGRAM_BOT_URL || "http://localhost:4000"
+```
+
+## Environment variables
+
+### Java Spring Boot backend
+Create environment variables or use `.env`/shell exports:
 
 ```bash
-cd SIH_PAIMANA
-source .venv/bin/activate
+export PORT=8080
+export SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/setu_db
+export SPRING_DATASOURCE_USERNAME=root
+export SPRING_DATASOURCE_PASSWORD=your_password
+export JWT_SECRET=your_long_jwt_secret
+export ML_SERVICE_BASE_URL=http://localhost:8000
+export CHATBOT_SERVICE_BASE_URL=http://localhost:8000
 ```
 
-If you are setting up a fresh environment, install the backend requirements:
-
+### Python chatbot service
 ```bash
-cd SIH_PAIMANA
-python -m venv .venv
-source .venv/bin/activate
-pip install -r chatbot/requirements.txt
-pip install -r ml-pipeline/requirements.txt
+export GEMINI_API_KEY=your_gemini_api_key
 ```
 
-### Frontend environment
-Install frontend dependencies:
-
-```bash
-cd SIH_PAIMANA/frontend
-npm install
-```
-
-Make sure the frontend environment file contains the correct values:
-
-```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_TELEGRAM_BOT_URL=http://localhost:4000
-```
-
-### Telegram bot environment
-Configure Telegram bot secrets in `telegram_bot/.env`:
+### Telegram bot
+Create `telegram_bot/.env`:
 
 ```env
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 PORT=4000
-ALLOWED_ORIGIN=*
+ALLOWED_ORIGIN=http://localhost:5173
 ```
 
-### Gemini environment
-The chatbot uses Gemini for answer generation. Ensure the backend environment has:
+### Frontend
+Create `frontend/.env`:
 
 ```env
-GEMINI_API_KEY=your_gemini_api_key
+VITE_API_BASE_URL=http://localhost:8080
+VITE_ML_API_BASE_URL=http://localhost:8000
+VITE_TELEGRAM_BOT_URL=http://localhost:4000
 ```
 
----
+## Local setup and run commands
 
-## 6. Running the Project
+### 1. Start the Spring Boot backend
 
-### 1) Start the backend
+```bash
+cd SIH_PAIMANA/PAIMANA-backend
+./mvnw spring-boot:run
+```
+
+Default URL:
+```text
+http://localhost:8080
+```
+
+### 2. Start the Python AI/ML service
+
 ```bash
 cd SIH_PAIMANA
 source .venv/bin/activate
 python -m chatbot.api
 ```
 
-The FastAPI server will run on:
-
+Default URL:
 ```text
 http://localhost:8000
 ```
 
-### 2) Start the Telegram bot service
+### 3. Start the Telegram bot
+
 ```bash
 cd SIH_PAIMANA/telegram_bot
 npm install
 npm start
 ```
 
-The Telegram service runs on:
-
+Default URL:
 ```text
 http://localhost:4000
 ```
 
-### 3) Start the frontend
+### 4. Start the frontend
+
 ```bash
 cd SIH_PAIMANA/frontend
+npm install
 npm run dev
 ```
 
-The frontend will run on the Vite default port, typically:
-
+Default URL:
 ```text
 http://localhost:5173
 ```
 
----
+## Data and model notes
 
-## 7. Backend and API Overview
+The project uses historical infrastructure project datasets and trained ML models for predictions and dashboard insights.
 
-### Predict endpoint
-`POST /api/predict`
+Relevant locations:
+- `ml-pipeline/data/processed/merged_projects.csv`
+- `ml-pipeline/src/04_COST_MODEL (1).py`
+- `ml-pipeline/src/time_model.py`
+- `ml-pipeline/data/models/`
 
-Used to submit a new project and get:
-- predicted overrun percentage
-- predicted delay in days
-- cost risk tier
-- time risk tier
-- overall risk tier
-- session ID for follow-up chat
+The Python service reads historical data for similar-project retrieval and dashboard summaries, and the Spring Boot app orchestrates these calls.
 
-### Chat endpoint
-`POST /api/chat`
+## Typical workflow
 
-Used for chatbot interaction with the user’s session.
+1. User registers or logs in through the Spring Boot backend.
+2. User creates a project in the React app.
+3. Spring Boot stores the project record and calls the ML service for risk prediction.
+4. The ML service computes predicted overrun and delay values.
+5. The Spring Boot app stores the risk results and exposes them via dashboard/project APIs.
+6. The chatbot service answers project-specific questions using historical and current context.
+7. High-risk projects can trigger Telegram alerts.
 
-### Dashboard endpoints
-- `GET /api/dashboard/risk-summary`
-- `GET /api/dashboard/sector-risk`
-- `GET /api/dashboard/top-risky`
+## Troubleshooting
 
-### Telegram alert endpoint
-`POST /api/telegram/alert`
-
-Used by the frontend or bot flow to send an operational Telegram alert.
-
----
-
-## 8. Backend and Database Tunneling
-
-### Why tunneling is useful
-You may need to expose the backend or database to someone outside your local network, for example:
-- a teammate testing the API
-- a friend validating the chatbot endpoints
-- a remote database connection from another machine
-
-### Recommended tunneling approach
-#### Option A: expose the FastAPI backend with ngrok
-Run the backend locally first:
-
-```bash
-cd SIH_PAIMANA
-source .venv/bin/activate
-python -m chatbot.api
-```
-
-Then expose it with ngrok:
-
-```bash
-ngrok http 8000
-```
-
-Use the generated public URL only when you need remote access. For normal local frontend usage, keep the frontend pointed to:
-
-```text
-http://localhost:8000
-```
-
-This avoids unnecessary cross-origin and local-network issues.
-
-#### Option B: expose MySQL / database access via SSH tunnel or a secure tunnel
-If your database is hosted remotely and you want to access it from another machine, use a secure tunnel rather than exposing the database directly.
-
-Typical patterns:
-- SSH tunnel to localhost port forwarding
-- cloud VPN / bastion-host access
-- private tunnel service for internal users
-
-Do not expose the database directly to the public internet unless it is properly secured.
-
-### Important tunneling guidance
-- Frontend should normally use the local backend URL during local development.
-- Use ngrok only for temporary external testing.
-- Backend and database access should be protected using credentials, whitelisting, or private network routing.
-
----
-
-## 9. Historical Data and Retrieval Strategy
-
-### Current historical retrieval approach
-The current system uses the processed CSV file:
-
-```text
-ml-pipeline/data/processed/merged_projects.csv
-```
-
-This file is loaded by the chatbot-related retrieval flow so that related project history can be used for:
-- contextual answers
-- comparable project matching
-- risk explanation grounded in past data
-
-### Why this approach is used
-- low-latency access
-- no need to depend on a database query for every chat request
-- easier deployment and consistent behavior on server environments
-
-### Future scalability option
-For larger-scale deployment, the project can evolve toward:
-- a vector database for semantic retrieval
-- MySQL-backed structured storage
-- a hybrid setup where structured data stays in SQL and retrieval uses a vector store
-
----
-
-## 10. ML Pipeline Notes
-
-The ML pipeline is under `ml-pipeline/`.
-
-### Key files
-- `ml-pipeline/src/04_COST_MODEL (1).py` → cost overrun model
-- `ml-pipeline/src/time_model.py` → delay model
-- `ml-pipeline/data/models/cost_model.pkl` → saved cost model
-- `ml-pipeline/data/models/time_model.pkl` → saved delay model
-- `ml-pipeline/README_cost_model (1).md` → model design notes
-
-### Model compatibility note
-The saved model artifacts were previously generated with older package versions. If you retrain or regenerate models, use the same environment versions used during training to avoid compatibility issues.
-
----
-
-## 11. Telegram Bot Notes
-
-The Telegram bot is a lightweight independent service that sends alerts to a configured chat.
-
-### Typical usage
-- High-risk predictions trigger automatic Telegram alerts
-- Manual alert sending is also supported from the frontend
-
-### Important note
-The Telegram bot is separate from the main FastAPI backend and does not replace the backend API.
-
----
-
-## 12. Common Troubleshooting
-
-### Frontend shows blank page after prediction
+### Spring Boot fails to start
 Check:
-- backend is running on `http://localhost:8000`
-- `frontend/.env` uses the correct backend URL
-- `apiClient` has the right base URL
+- Java 17 is installed
+- MySQL credentials are valid
+- `SPRING_DATASOURCE_URL` is correct
+- JWT secret is configured
 
-### Chat endpoint returns 422
-Check that the request payload matches the backend schema:
-
-```json
-{
-  "session_id": "<session-id>",
-  "message": "your question"
-}
-```
-
-### Prediction endpoint not loading model
+### Python service is not responding
 Check:
-- environment is activated
-- model files exist in `ml-pipeline/data/models/`
-- required model packages are installed
-- the saved model artifacts were recreated in the current environment if compatibility issues occur
+- virtual environment is activated
+- `pip install -r chatbot/requirements.txt` was run
+- `GEMINI_API_KEY` exists if chatbot generation is enabled
+- `ml-pipeline` data files are present
 
-### Dashboard does not load data
+### Frontend cannot reach backend
 Check:
-- backend dashboard endpoints are running
-- CSV data exists in `ml-pipeline/data/processed/`
-- frontend `VITE_API_BASE_URL` is correct
+- `VITE_API_BASE_URL` points to the right backend port
+- the Java app is running on port 8080
+- CORS settings are allowed for the frontend origin
 
----
+### Telegram alerts are not sent
+Check:
+- `telegram_bot/.env` is populated
+- the Telegram bot token is valid
+- the chat ID is correct
+- the Node service is running on port 4000
 
-## 13. Recommended Local Development Workflow
+## Deployment guidance
 
-1. Activate the Python environment
-2. Start the backend
-3. Start the Telegram bot service
-4. Start the frontend
-5. Submit a project on the prediction page
-6. Open the chatbot and send a question
-7. Check the dashboard and risk summaries
+For production deployment, keep the service split as follows:
+- `PAIMANA-backend` as the main secured application backend
+- `chatbot/` as the Python ML + LLM service
+- `frontend/` as the client application
+- `telegram_bot/` as a separate notification service
 
----
+Use environment variables for secrets and keep MySQL/JWT credentials out of source control.
 
-## 14. Deployment Suggestions
+## Summary
 
-### Minimal deployment setup
-- Host the FastAPI backend on a server or cloud VM
-- Host the frontend static build on Vercel / Netlify / cloud storage
-- Keep the Telegram bot as a separate service
-- Use a proper environment variable setup for secrets
+SETU is a multi-service infrastructure risk platform with:
+- a Java Spring Boot core application
+- a Python AI/ML backend for prediction and chatbot logic
+- a React frontend for user interaction
+- a Node Telegram notification service
 
-### Better production setup
-- Use a proper MySQL service for persistent application data
-- Use a vector database for semantic retrieval if chatbot search becomes scale-heavy
-- Add authentication / authorization if multiple users must be separated
-- Add logging, monitoring, and health checks
-
----
-
-## 15. Key Takeaways
-
-- The project is a full-stack AI risk prediction and chatbot system.
-- Main local development flow is: backend + telegram service + frontend.
-- Current historical data retrieval is CSV-based for speed and simplicity.
-- Local frontend should use `http://localhost:8000`, not an ngrok URL, unless you are testing external access.
-- Database tunneling should be done securely, ideally through SSH / private tunnel mechanisms.
-
----
-
-## 16. Useful Commands Summary
-
-### Backend
-```bash
-cd SIH_PAIMANA
-source .venv/bin/activate
-python -m chatbot.api
-```
-
-### Frontend
-```bash
-cd SIH_PAIMANA/frontend
-npm install
-npm run dev
-```
-
-### Telegram bot
-```bash
-cd SIH_PAIMANA/telegram_bot
-npm install
-npm start
-```
-
-### ML pipeline
-```bash
-cd SIH_PAIMANA
-source .venv/bin/activate
-pip install -r ml-pipeline/requirements.txt
-```
-
----
-
-## 17. Notes for Future Improvements
-
-- Add proper authentication and session management
-- Move persistent data to a real database
-- Improve retrieval via vector search
-- Add automated health checks and monitoring
-- Rebuild model artifacts in a pinned environment for reproducibility
-
-If you want, this README can also be expanded into a deployment-specific version that documents your exact server setup, database credentials flow, and ngrok usage for public testing.
+The README now reflects the actual architecture of the repository rather than an older single-backend assumption.
