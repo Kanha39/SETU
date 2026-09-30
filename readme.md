@@ -417,5 +417,3 @@ SETU is a multi-service infrastructure risk platform with:
 - a Python AI/ML backend for prediction and chatbot logic
 - a React frontend for user interaction
 - a Node Telegram notification service
-
-The README now reflects the actual architecture of the repository rather than an older single-backend assumption.
