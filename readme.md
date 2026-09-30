@@ -456,4 +456,4 @@ pip install -r ml-pipeline/requirements.txt
 - Add automated health checks and monitoring
 - Rebuild model artifacts in a pinned environment for reproducibility
 
-If you want, this README can also be expanded into a deployment-specific version that documents your exact server setup, database credentials flow, and ngrok usage for public testing.
+
